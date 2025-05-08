@@ -11,10 +11,32 @@ import (
 
 // Setup 註冊所有路由與中介層
 func Setup(e *echo.Echo, db *pgxpool.Pool) {
+	// 基礎 API 路由群組
 	api := e.Group("/api")
+
+	// 健康檢查（需登入）
 	api.GET("/ping", handler.PingHandler(db), middleware.RequireAuth)
+
+	// 使用者登入
 	api.POST("/login_user", handler.LoginUserHandler(db))
 
-	users := api.Group("/users")
+	// Users 路由群組（需登入）
+	users := api.Group("/users", middleware.RequireAuth)
+
+	// 管理員專屬路由
 	users.POST("", handler.CreateUserHandler(db), middleware.RequireAdmin)
+	users.GET("/:id", handler.GetUserHandler(db), middleware.RequireAdmin)
+	users.PUT("/:id", handler.UpdateUserHandler(db), middleware.RequireAdmin)
+	users.DELETE("/:id", handler.DeleteUserHandler(db), middleware.RequireAdmin)
+
+	// 取得、更新、刪除當前使用者個人資料
+	users.GET("/me", handler.GetMeHandler(db))
+	users.PUT("/me", handler.UpdateMeHandler(db))
+	users.DELETE("/me", handler.DeleteMeHandler(db))
+
+	// 更新當前使用者密碼
+	users.PATCH("/me/password", handler.UpdatePasswordMeHandler(db))
+
+	// 管理員重置其他使用者密碼
+	users.POST("/:id/reset_password", handler.ResetUserPasswordHandler(db), middleware.RequireAdmin)
 }
