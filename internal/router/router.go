@@ -7,15 +7,15 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
+	"github.com/redis/go-redis/v9"
 )
 
 // Setup 註冊所有路由與中介層
-func Setup(e *echo.Echo, db *pgxpool.Pool) {
-	// 基礎 API 路由群組
+func Setup(e *echo.Echo, db *pgxpool.Pool, rdb *redis.Client) {
 	api := e.Group("/api")
 
 	// 健康檢查（需登入）
-	api.GET("/ping", handler.PingHandler(db), middleware.RequireAuth)
+	api.GET("/ping", handler.PingHandler(db, rdb), middleware.RequireAuth)
 
 	// 使用者登入
 	api.POST("/login_user", handler.LoginUserHandler(db))
