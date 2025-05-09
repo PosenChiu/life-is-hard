@@ -36,3 +36,7 @@ dev: $(AIR) $(SWAG)
 			&& go build -o ./tmp/main cmd/service/main.go \
 			&& printf '# Created by Makefile automatically.\n*\n' | tee {docs,tmp}/.gitignore >/dev/null \
 		"
+
+.PHONY: swagger
+swagger:
+	open http://localhost:8080/swagger/index.html
