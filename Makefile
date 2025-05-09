@@ -29,7 +29,7 @@ dev: $(AIR) $(SWAG)
 	@$(AIR) \
 		-build.exclude_dir "docs" \
 		-build.cmd "\
-			$(SWAG) init -g main.go -d cmd/service,internal/handler,internal/dto \
+			$(SWAG) init -g main.go -d cmd/service,internal/dto,internal/handler \
 			&& go mod tidy \
 			&& go fmt ./... \
 			&& go vet ./... \
