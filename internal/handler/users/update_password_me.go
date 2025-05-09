@@ -1,5 +1,5 @@
-// File: internal/handler/update_password_me.go
-package handler
+// File: internal/handler/users/update_password_me.go
+package users
 
 import (
 	"net/http"

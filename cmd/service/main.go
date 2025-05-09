@@ -1,4 +1,12 @@
 // File: cmd/service/main.go
+// @title        Life Is Hard API
+// @version      1.0
+// @description  這是 Life Is Hard 的後端 API 文件
+// @host         localhost:8080
+// @BasePath     /api
+
+// @securityDefinitions.oauth2.password OAuth2Password
+// @tokenUrl /api/auth/login
 package main
 
 import (

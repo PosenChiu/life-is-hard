@@ -1,5 +1,5 @@
-// File: internal/handler/reset_user_password.go
-package handler
+// File: internal/handler/users/reset_user_password.go
+package users
 
 import (
 	"crypto/rand"

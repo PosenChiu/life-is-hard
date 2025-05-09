@@ -2,12 +2,14 @@
 package router
 
 import (
-	"life-is-hard/internal/handler"
-	"life-is-hard/internal/middleware"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/redis/go-redis/v9"
+
+	"life-is-hard/internal/handler"
+	"life-is-hard/internal/handler/auth"
+	"life-is-hard/internal/handler/users"
+	"life-is-hard/internal/middleware"
 )
 
 // Setup 註冊所有路由與中介層
@@ -18,25 +20,18 @@ func Setup(e *echo.Echo, db *pgxpool.Pool, rdb *redis.Client) {
 	api.GET("/ping", handler.PingHandler(db, rdb), middleware.RequireAuth)
 
 	// 使用者登入
-	api.POST("/login_user", handler.LoginUserHandler(db))
+	api.POST("/auth/login", auth.AuthLoginHandler(db))
 
-	// Users 路由群組（需登入）
-	users := api.Group("/users", middleware.RequireAuth)
-
-	// 管理員專屬路由
-	users.POST("", handler.CreateUserHandler(db), middleware.RequireAdmin)
-	users.GET("/:id", handler.GetUserHandler(db), middleware.RequireAdmin)
-	users.PUT("/:id", handler.UpdateUserHandler(db), middleware.RequireAdmin)
-	users.DELETE("/:id", handler.DeleteUserHandler(db), middleware.RequireAdmin)
+	// 管理員專屬 Users CRUD
+	api.POST("/users", users.CreateUserHandler(db), middleware.RequireAdmin)
+	api.GET("/users/:id", users.GetUserHandler(db), middleware.RequireAdmin)
+	api.PUT("/users/:id", users.UpdateUserHandler(db), middleware.RequireAdmin)
+	api.DELETE("/users/:id", users.DeleteUserHandler(db), middleware.RequireAdmin)
+	api.POST("/users/:id/reset_password", users.ResetUserPasswordHandler(db), middleware.RequireAdmin)
 
 	// 取得、更新、刪除當前使用者個人資料
-	users.GET("/me", handler.GetMeHandler(db))
-	users.PUT("/me", handler.UpdateMeHandler(db))
-	users.DELETE("/me", handler.DeleteMeHandler(db))
-
-	// 更新當前使用者密碼
-	users.PATCH("/me/password", handler.UpdatePasswordMeHandler(db))
-
-	// 管理員重置其他使用者密碼
-	users.POST("/:id/reset_password", handler.ResetUserPasswordHandler(db), middleware.RequireAdmin)
+	api.GET("/users/me", users.GetMeHandler(db), middleware.RequireAuth)
+	api.PUT("/users/me", users.UpdateMeHandler(db), middleware.RequireAuth)
+	api.DELETE("/users/me", users.DeleteMeHandler(db), middleware.RequireAuth)
+	api.PATCH("/users/me/password", users.UpdatePasswordMeHandler(db), middleware.RequireAuth)
 }

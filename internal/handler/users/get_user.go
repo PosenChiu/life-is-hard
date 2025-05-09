@@ -1,5 +1,5 @@
-// File: internal/handler/get_user.go
-package handler
+// File: internal/handler/users/get_user.go
+package users
 
 import (
 	"net/http"

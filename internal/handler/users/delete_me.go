@@ -1,5 +1,5 @@
-// File: internal/handler/delete_me.go
-package handler
+// File: internal/handler/users/delete_me.go
+package users
 
 import (
 	"net/http"
