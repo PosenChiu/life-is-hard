@@ -20,7 +20,7 @@ func Setup(e *echo.Echo, db *pgxpool.Pool, rdb *redis.Client) {
 	api.GET("/ping", handler.PingHandler(db, rdb), middleware.RequireAuth)
 
 	// 使用者登入
-	api.POST("/auth/login", auth.AuthLoginHandler(db))
+	api.POST("/auth/login", auth.LoginHandler(db))
 
 	// 管理員專屬 Users CRUD
 	api.POST("/users", users.CreateUserHandler(db), middleware.RequireAdmin)
