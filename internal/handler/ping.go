@@ -22,7 +22,7 @@ type PingResponse struct {
 // PingHandler 健康檢查（需通過認證），並於 Redis 設定示例鍵值
 // @Summary     Health Check
 // @Description 回傳 pong，並檢查資料庫連線是否正常，同時在 Redis 設置一個示例鍵值
-// @Tags        health
+// @Tags        default
 // @Accept      json
 // @Produce     json
 // @Success     200 {object} PingResponse
