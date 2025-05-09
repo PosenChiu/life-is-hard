@@ -67,9 +67,9 @@ func main() {
 	}
 
 	// 回滾並執行遷移
-	if err := db.RollbackAll(dbURL); err != nil {
-		log.Fatalf("RollbackAll 失敗: %v", err)
-	}
+	// if err := db.RollbackAll(dbURL); err != nil {
+	// 	log.Fatalf("RollbackAll 失敗: %v", err)
+	// }
 	if err := db.RunMigrations(dbURL); err != nil {
 		log.Fatalf("Migration 執行失敗: %v", err)
 	}

@@ -9,19 +9,27 @@ $(AIR):
 $(SWAG):
 	go install github.com/swaggo/swag/cmd/swag@latest
 
+.PHONY: clean
+clean: kill
+	@docker volume ls -qf "name=^$(NAMESPACE)-" | xargs -r docker volume rm
+
 .PHONY: kill
 kill:
 	@docker ps -qaf "name=^$(NAMESPACE)-" | xargs -r docker stop | xargs -r docker rm
 
-.PHONY: db
-db: kill
+.PHONY: run
+run: kill
 	@docker run -d \
 		--env POSTGRES_PASSWORD=$(DB_PASSWORD) \
+		--name $(NAMESPACE)-postgres \
 		--publish $(DB_PORT):5432 \
-		--name $(NAMESPACE)-postgres postgres:latest
+		--volume $(NAMESPACE)-postgres:/var/lib/postgresql/data \
+		postgres:latest
 	@docker run -d \
+		--name $(NAMESPACE)-redis \
 		--publish $(REDIS_PORT):6379 \
-		--name $(NAMESPACE)-redis redis:latest \
+		--volume $(NAMESPACE)-redis:/data \
+		redis:latest \
 		redis-server --requirepass $(REDIS_PASSWORD)
 
 .PHONY: dev
