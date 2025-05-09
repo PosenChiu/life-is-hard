@@ -31,7 +31,7 @@ type ResetUserPasswordResponse struct {
 // @Success     200  {object}  ResetUserPasswordResponse
 // @Failure     400  {object}  dto.HTTPError
 // @Failure     500  {object}  dto.HTTPError
-// @Security    OAuth2Password[default]
+// @Security    ApiKeyAuth
 // @Router      /users/{id}/reset_password [post]
 func ResetUserPasswordHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {

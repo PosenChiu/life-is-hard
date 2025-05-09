@@ -27,7 +27,7 @@ type PingResponse struct {
 // @Produce     json
 // @Success     200 {object} PingResponse
 // @Failure     500 {object} dto.HTTPError
-// @Security    OAuth2Password[default]
+// @Security    ApiKeyAuth
 // @Router      /ping [get]
 func PingHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 	return func(c echo.Context) error {

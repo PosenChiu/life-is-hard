@@ -20,7 +20,7 @@ import (
 // @Success     204  "No Content"
 // @Failure     400  {object}  dto.HTTPError  "參數錯誤"
 // @Failure     500  {object}  dto.HTTPError  "伺服器錯誤"
-// @Security    OAuth2Password[default]
+// @Security    ApiKeyAuth
 // @Router      /users/{id} [delete]
 func DeleteUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {

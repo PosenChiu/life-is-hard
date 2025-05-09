@@ -67,7 +67,7 @@ type UserResponse struct {
 // @Success     201      {object} UserResponse
 // @Failure     400      {object} dto.HTTPError
 // @Failure     500      {object} dto.HTTPError
-// @Security    OAuth2Password[default]
+// @Security    ApiKeyAuth
 // @Router      /users [post]
 func CreateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {

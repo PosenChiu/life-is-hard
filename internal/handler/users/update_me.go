@@ -39,7 +39,7 @@ type UpdateMeRequest struct {
 // @Failure     400   {object} dto.HTTPError
 // @Failure     401   {object} dto.HTTPError
 // @Failure     500   {object} dto.HTTPError
-// @Security    OAuth2Password[default]
+// @Security    ApiKeyAuth
 // @Router      /users/me [put]
 func UpdateMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
