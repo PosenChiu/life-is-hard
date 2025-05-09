@@ -4,9 +4,9 @@
 // @description  這是 Life Is Hard 的後端 API 文件
 // @host         localhost:8080
 // @BasePath     /api
-
-// @securityDefinitions.oauth2.password OAuth2Password
-// @tokenUrl /api/auth/login
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 package main
 
 import (

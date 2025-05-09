@@ -11,6 +11,7 @@ import (
 	"life-is-hard/internal/model"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // CustomClaims 定義 JWT 負載內容
@@ -18,6 +19,20 @@ type CustomClaims struct {
 	ID      int  `json:"id"`
 	IsAdmin bool `json:"is_admin"`
 	jwt.RegisteredClaims
+}
+
+// HashPassword 接收明文密碼，回傳 bcrypt 哈希字串
+func HashPassword(password string) (string, error) {
+	hashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashBytes), nil
+}
+
+// ComparePassword 比對明文密碼與 bcrypt 哈希，成功回傳 nil，失敗則回傳錯誤
+func ComparePassword(hash, password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
 // AuthenticateUser 根據使用者結構和明文密碼驗證，成功回傳使用者
