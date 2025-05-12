@@ -7,140 +7,102 @@ import (
 
 	"life-is-hard/internal/model"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// CreateOAuthClient 新增一個 OAuth Client
-func CreateOAuthClient(ctx context.Context, pool *pgxpool.Pool, c *model.OAuthClient) error {
-	row := pool.QueryRow(ctx, `
-        INSERT INTO oauth_clients
-            (client_id, client_secret, name, owner_id, redirect_uris, grant_types, scopes, is_confidential)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-        RETURNING id, created_at, updated_at
-    `,
-		c.ClientID,
-		c.ClientSecret,
-		c.Name,
-		c.OwnerID,
-		c.RedirectURIs,
-		c.GrantTypes,
-		c.Scopes,
-		c.IsConfidential,
-	)
-
-	if err := row.Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt); err != nil {
-		return fmt.Errorf("CreateOAuthClient: %w", err)
-	}
-	return nil
+// OAuthClientStore 負責對 oauth_clients 表的所有操作
+type OAuthClientStore struct {
+	pool *pgxpool.Pool
 }
 
-// GetOAuthClientByID 以 primary key 取得 Client
-func GetOAuthClientByID(ctx context.Context, pool *pgxpool.Pool, id int) (*model.OAuthClient, error) {
-	c := &model.OAuthClient{}
-	row := pool.QueryRow(ctx, `
-        SELECT id, client_id, client_secret, name, owner_id, redirect_uris,
-               grant_types, scopes, is_confidential, created_at, updated_at
-        FROM oauth_clients WHERE id = $1
-    `, id)
-
-	if err := scanOAuthClient(row, c); err != nil {
-		return nil, fmt.Errorf("GetOAuthClientByID: %w", err)
-	}
-	return c, nil
+// NewOAuthClientStore 建立一個新的 OAuthClientStore
+func NewOAuthClientStore(pool *pgxpool.Pool) *OAuthClientStore {
+	return &OAuthClientStore{pool: pool}
 }
 
-// GetOAuthClientByClientID 以 client_id 取得 Client
-func GetOAuthClientByClientID(ctx context.Context, pool *pgxpool.Pool, clientID string) (*model.OAuthClient, error) {
-	c := &model.OAuthClient{}
-	row := pool.QueryRow(ctx, `
-        SELECT id, client_id, client_secret, name, owner_id, redirect_uris,
-               grant_types, scopes, is_confidential, created_at, updated_at
-        FROM oauth_clients WHERE client_id = $1
-    `, clientID)
-
-	if err := scanOAuthClient(row, c); err != nil {
-		return nil, fmt.Errorf("GetOAuthClientByClientID: %w", err)
-	}
-	return c, nil
-}
-
-// UpdateOAuthClient 更新 Client 相關欄位（不含 Secret）並自動更新 updated_at
-func UpdateOAuthClient(ctx context.Context, pool *pgxpool.Pool, c *model.OAuthClient) error {
-	_, err := pool.Exec(ctx, `
-        UPDATE oauth_clients SET
-            name = $1,
-            owner_id = $2,
-            redirect_uris = $3,
-            grant_types = $4,
-            scopes = $5,
-            is_confidential = $6,
-            updated_at = now()
-        WHERE id = $7
-    `,
-		c.Name,
-		c.OwnerID,
-		c.RedirectURIs,
-		c.GrantTypes,
-		c.Scopes,
-		c.IsConfidential,
-		c.ID,
-	)
-	if err != nil {
-		return fmt.Errorf("UpdateOAuthClient: %w", err)
-	}
-	return nil
-}
-
-// UpdateOAuthClientSecret 僅更新 secret
-func UpdateOAuthClientSecret(ctx context.Context, pool *pgxpool.Pool, id int, newSecret string) error {
-	_, err := pool.Exec(ctx, `
-        UPDATE oauth_clients SET
-            client_secret = $1,
-            updated_at = now()
-        WHERE id = $2
-    `, newSecret, id)
-
-	if err != nil {
-		return fmt.Errorf("UpdateOAuthClientSecret: %w", err)
-	}
-	return nil
-}
-
-// DeleteOAuthClient 刪除 Client
-func DeleteOAuthClient(ctx context.Context, pool *pgxpool.Pool, id int) error {
-	_, err := pool.Exec(ctx, `DELETE FROM oauth_clients WHERE id = $1`, id)
-	if err != nil {
-		return fmt.Errorf("DeleteOAuthClient: %w", err)
-	}
-	return nil
-}
-
-// ValidateClientCredentials 驗證 client_id / secret 是否有效
-func ValidateClientCredentials(ctx context.Context, pool *pgxpool.Pool, clientID, secret string) (*model.OAuthClient, error) {
-	c, err := GetOAuthClientByClientID(ctx, pool, clientID)
-	if err != nil {
-		return nil, err
-	}
-	if c == nil || !c.IsConfidential || c.ClientSecret != secret {
-		return nil, nil
-	}
-	return c, nil
-}
-
-// internal helper
-func scanOAuthClient(row pgx.Row, c *model.OAuthClient) error {
-	return row.Scan(
+// GetByID 根據主鍵 ID 查找 OAuthClient
+func (s *OAuthClientStore) GetByID(ctx context.Context, id int) (*model.OAuthClient, error) {
+	var c model.OAuthClient
+	err := s.pool.QueryRow(ctx, `
+		SELECT id, client_id, client_secret, owner_id, grant_types, created_at, updated_at
+		FROM oauth_clients
+		WHERE id = $1
+	`, id).Scan(
 		&c.ID,
 		&c.ClientID,
 		&c.ClientSecret,
-		&c.Name,
 		&c.OwnerID,
-		&c.RedirectURIs,
 		&c.GrantTypes,
-		&c.Scopes,
-		&c.IsConfidential,
 		&c.CreatedAt,
 		&c.UpdatedAt,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("GetByID: %w", err)
+	}
+	return &c, nil
+}
+
+// GetByClientID 根據 client_id 查找 OAuthClient
+func (s *OAuthClientStore) GetByClientID(ctx context.Context, clientID string) (*model.OAuthClient, error) {
+	var c model.OAuthClient
+	err := s.pool.QueryRow(ctx, `
+		SELECT id, client_id, client_secret, owner_id, grant_types, created_at, updated_at
+		FROM oauth_clients
+		WHERE client_id = $1
+	`, clientID).Scan(
+		&c.ID,
+		&c.ClientID,
+		&c.ClientSecret,
+		&c.OwnerID,
+		&c.GrantTypes,
+		&c.CreatedAt,
+		&c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("GetByClientID: %w", err)
+	}
+	return &c, nil
+}
+
+// Create 插入一筆新的 OAuthClient，並回填 ID、CreatedAt、UpdatedAt
+func (s *OAuthClientStore) Create(ctx context.Context, c *model.OAuthClient) error {
+	row := s.pool.QueryRow(ctx, `
+		INSERT INTO oauth_clients (client_id, client_secret, owner_id, grant_types)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at, updated_at
+	`, c.ClientID, c.ClientSecret, c.OwnerID, c.GrantTypes)
+
+	if err := row.Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		return fmt.Errorf("Create: %w", err)
+	}
+	return nil
+}
+
+// Update 更新既有的 OAuthClient（除 ClientID 之外的欄位），並回填 UpdatedAt
+func (s *OAuthClientStore) Update(ctx context.Context, c *model.OAuthClient) error {
+	row := s.pool.QueryRow(ctx, `
+		UPDATE oauth_clients
+		SET client_secret = $1, owner_id = $2, grant_types = $3, updated_at = now()
+		WHERE id = $4
+		RETURNING updated_at
+	`, c.ClientSecret, c.OwnerID, c.GrantTypes, c.ID)
+
+	if err := row.Scan(&c.UpdatedAt); err != nil {
+		return fmt.Errorf("Update: %w", err)
+	}
+	return nil
+}
+
+// Delete 刪除指定 ID 的 OAuthClient
+func (s *OAuthClientStore) Delete(ctx context.Context, id int) error {
+	cmd, err := s.pool.Exec(ctx, `
+		DELETE FROM oauth_clients WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("Delete: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("Delete: no row with id %d", id)
+	}
+	return nil
 }
