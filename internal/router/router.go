@@ -22,6 +22,7 @@ func Setup(e *echo.Echo, db *pgxpool.Pool, rdb *redis.Client) {
 
 	// 使用者登入
 	api.POST("/auth/login", auth.LoginHandler(db))
+	api.POST("/oauth/token", oauth.TokenHandler(db, rdb))
 
 	// 管理員專屬 Users CRUD
 	apiUsers := api.Group("/users", middleware.RequireAdmin)
