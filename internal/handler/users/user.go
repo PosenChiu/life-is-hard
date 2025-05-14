@@ -1,4 +1,4 @@
-// File: internal/handler/users/user.go
+// File: internal/handler/users/users.go
 package users
 
 import (

@@ -8,6 +8,7 @@ import (
 
 	"life-is-hard/internal/handler"
 	"life-is-hard/internal/handler/auth"
+	"life-is-hard/internal/handler/oauth"
 	"life-is-hard/internal/handler/users"
 	"life-is-hard/internal/middleware"
 )
@@ -23,15 +24,24 @@ func Setup(e *echo.Echo, db *pgxpool.Pool, rdb *redis.Client) {
 	api.POST("/auth/login", auth.LoginHandler(db))
 
 	// 管理員專屬 Users CRUD
-	api.POST("/users", users.CreateUserHandler(db), middleware.RequireAdmin)
-	api.GET("/users/:id", users.GetUserHandler(db), middleware.RequireAdmin)
-	api.PUT("/users/:id", users.UpdateUserHandler(db), middleware.RequireAdmin)
-	api.DELETE("/users/:id", users.DeleteUserHandler(db), middleware.RequireAdmin)
-	api.POST("/users/:id/reset_password", users.ResetUserPasswordHandler(db), middleware.RequireAdmin)
+	apiUsers := api.Group("/users", middleware.RequireAdmin)
+	apiUsers.POST("", users.CreateUserHandler(db))
+	apiUsers.GET("/:id", users.GetUserHandler(db))
+	apiUsers.PUT("/:id", users.UpdateUserHandler(db))
+	apiUsers.DELETE("/:id", users.DeleteUserHandler(db))
+	apiUsers.POST("/:id/reset_password", users.ResetUserPasswordHandler(db))
 
 	// 取得、更新、刪除當前使用者個人資料
-	api.GET("/users/me", users.GetMeHandler(db), middleware.RequireAuth)
-	api.PUT("/users/me", users.UpdateMeHandler(db), middleware.RequireAuth)
-	api.DELETE("/users/me", users.DeleteMeHandler(db), middleware.RequireAuth)
-	api.PATCH("/users/me/password", users.UpdatePasswordMeHandler(db), middleware.RequireAuth)
+	apiUsersMe := api.Group("/users/me", middleware.RequireAuth)
+	apiUsersMe.GET("", users.GetMeHandler(db))
+	apiUsersMe.PUT("", users.UpdateMeHandler(db))
+	apiUsersMe.DELETE("", users.DeleteMeHandler(db))
+	apiUsersMe.PATCH("/password", users.UpdatePasswordMeHandler(db))
+
+	apiOauthClients := api.Group("/oauth/clients", middleware.RequireAdmin)
+	apiOauthClients.POST("", oauth.CreateOAuthClientHandler(db))
+	apiOauthClients.GET("", oauth.ListOAuthClientsHandler(db))
+	apiOauthClients.GET("/:id", oauth.GetOAuthClientHandler(db))
+	apiOauthClients.PUT("/:id", oauth.UpdateOAuthClientHandler(db))
+	apiOauthClients.DELETE("/:id", oauth.DeleteOAuthClientHandler(db))
 }

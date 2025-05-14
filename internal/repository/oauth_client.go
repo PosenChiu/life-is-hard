@@ -106,3 +106,36 @@ func (s *OAuthClientStore) Delete(ctx context.Context, id int) error {
 	}
 	return nil
 }
+
+// List 取得所有 OAuthClient
+func (s *OAuthClientStore) List(ctx context.Context) ([]model.OAuthClient, error) {
+	rows, err := s.pool.Query(ctx, `
+        SELECT id, client_id, client_secret, owner_id, grant_types, created_at, updated_at
+        FROM oauth_clients
+    `)
+	if err != nil {
+		return nil, fmt.Errorf("List OAuthClients: %w", err)
+	}
+	defer rows.Close()
+
+	var clients []model.OAuthClient
+	for rows.Next() {
+		var c model.OAuthClient
+		if err := rows.Scan(
+			&c.ID,
+			&c.ClientID,
+			&c.ClientSecret,
+			&c.OwnerID,
+			&c.GrantTypes,
+			&c.CreatedAt,
+			&c.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan OAuthClient: %w", err)
+		}
+		clients = append(clients, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+	return clients, nil
+}
