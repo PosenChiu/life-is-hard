@@ -74,7 +74,7 @@ func convertToResponse(c *model.OAuthClient) OAuthClientResponse {
 // Handlers
 // ----------
 
-// CreateUserOAuthClientHandler handles POST /users/me/clients
+// CreateUserOAuthClientHandler handles POST /users/me/oauth/clients
 // @Summary     Create OAuth client for authenticated user
 // @Tags        users
 // @Accept      json
@@ -85,7 +85,7 @@ func convertToResponse(c *model.OAuthClient) OAuthClientResponse {
 // @Failure     401 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
-// @Router      /users/me/clients [post]
+// @Router      /users/me/oauth/clients [post]
 func CreateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// get user ID from JWT claims
@@ -119,7 +119,7 @@ func CreateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// ListUserOAuthClientsHandler handles GET /users/me/clients
+// ListUserOAuthClientsHandler handles GET /users/me/oauth/clients
 // @Summary     List OAuth clients for authenticated user
 // @Tags        users
 // @Accept      json
@@ -128,7 +128,7 @@ func CreateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     401 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
-// @Router      /users/me/clients [get]
+// @Router      /users/me/oauth/clients [get]
 func ListUserOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claimsRaw := c.Get("user")
@@ -152,7 +152,7 @@ func ListUserOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// GetUserOAuthClientHandler handles GET /users/me/clients/{client_id}
+// GetUserOAuthClientHandler handles GET /users/me/oauth/clients/{client_id}
 // @Summary     Get OAuth client for authenticated user
 // @Tags        users
 // @Accept      json
@@ -164,7 +164,7 @@ func ListUserOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
-// @Router      /users/me/clients/{client_id} [get]
+// @Router      /users/me/oauth/clients/{client_id} [get]
 func GetUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claimsRaw := c.Get("user")
@@ -192,7 +192,7 @@ func GetUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// UpdateUserOAuthClientHandler handles PUT /users/me/clients/{client_id}
+// UpdateUserOAuthClientHandler handles PUT /users/me/oauth/clients/{client_id}
 // @Summary     Update OAuth client for authenticated user
 // @Tags        users
 // @Accept      json
@@ -205,7 +205,7 @@ func GetUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
-// @Router      /users/me/clients/{client_id} [put]
+// @Router      /users/me/oauth/clients/{client_id} [put]
 func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claimsRaw := c.Get("user")
@@ -250,7 +250,7 @@ func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// DeleteUserOAuthClientHandler handles DELETE /users/me/clients/{client_id}
+// DeleteUserOAuthClientHandler handles DELETE /users/me/oauth/clients/{client_id}
 // @Summary     Delete OAuth client for authenticated user
 // @Tags        users
 // @Accept      json
@@ -262,7 +262,7 @@ func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
-// @Router      /users/me/clients/{client_id} [delete]
+// @Router      /users/me/oauth/clients/{client_id} [delete]
 func DeleteUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claimsRaw := c.Get("user")
