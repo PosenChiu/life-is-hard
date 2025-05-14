@@ -1,4 +1,5 @@
 // File: internal/handler/oauth/oauth_client.go
+
 package oauth
 
 import (
@@ -16,7 +17,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// CreateOAuthClientRequest 建立 OAuth client 的請求
+// ----------
+// DTOs
+// ----------
+
+// CreateOAuthClientRequest 新增 OAuth client 的請求
 // swagger:model CreateOAuthClientRequest
 type CreateOAuthClientRequest struct {
 	// required: true
@@ -25,29 +30,45 @@ type CreateOAuthClientRequest struct {
 	ClientSecret string `json:"client_secret" validate:"required" example:"secret"`
 	// optional: 擁有者 user_id
 	OwnerID *int `json:"owner_id" example:"1"`
-	// required: 一般只需 ["password","client_credentials"]
-	GrantTypes []string `json:"grant_types" validate:"required" example:"[\"password\",\"client_credentials\"]"`
+	// required: 授權類型，逗號分隔 (password,client_credentials)
+	GrantTypes []string `json:"grant_types" validate:"required" example:"password,client_credentials"`
 }
 
 // UpdateOAuthClientRequest 更新 OAuth client 的請求
 // swagger:model UpdateOAuthClientRequest
 type UpdateOAuthClientRequest struct {
 	// required: true
-	ClientSecret string   `json:"client_secret" validate:"required" example:"new-secret"`
-	OwnerID      *int     `json:"owner_id" example:"2"`
-	GrantTypes   []string `json:"grant_types" validate:"required" example:"[\"password\"]"`
+	ClientSecret string `json:"client_secret" validate:"required" example:"new-secret"`
+	// optional: 擁有者 user_id
+	OwnerID *int `json:"owner_id" example:"2"`
+	// required: 授權類型，逗號分隔 (password,client_credentials)
+	GrantTypes []string `json:"grant_types" validate:"required" example:"password,client_credentials"`
 }
 
 // OAuthClientResponse 回傳給客戶端的模型
 // swagger:model OAuthClientResponse
 type OAuthClientResponse struct {
-	ID           int       `json:"id" example:"1"`
-	ClientID     string    `json:"client_id" example:"my-client"`
-	ClientSecret string    `json:"client_secret" example:"secret"`
-	OwnerID      *int      `json:"owner_id" example:"1"`
-	GrantTypes   []string  `json:"grant_types" example:"[\"password\",\"client_credentials\"]"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           int    `json:"id" example:"1"`
+	ClientID     string `json:"client_id" example:"my-client"`
+	ClientSecret string `json:"client_secret" example:"secret"`
+	OwnerID      *int   `json:"owner_id" example:"1"`
+	// 授權類型陣列，用逗號分隔表示 (password,client_credentials)
+	GrantTypes []string `json:"grant_types" example:"password,client_credentials"`
+	CreatedAt  string   `json:"created_at" example:"2025-05-14T06:30:00Z"`
+	UpdatedAt  string   `json:"updated_at" example:"2025-05-14T06:30:00Z"`
+}
+
+// toResponse 將 model 轉成 API 回應
+func toResponse(c *model.OAuthClient) OAuthClientResponse {
+	return OAuthClientResponse{
+		ID:           c.ID,
+		ClientID:     c.ClientID,
+		ClientSecret: c.ClientSecret,
+		OwnerID:      c.OwnerID,
+		GrantTypes:   c.GrantTypes,
+		CreatedAt:    c.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    c.UpdatedAt.Format(time.RFC3339),
+	}
 }
 
 // CreateOAuthClientHandler 新增 OAuth client
@@ -72,26 +93,16 @@ func CreateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
 		}
 
-		store := repository.NewOAuthClientStore(db)
 		oc := &model.OAuthClient{
 			ClientID:     req.ClientID,
 			ClientSecret: req.ClientSecret,
 			OwnerID:      req.OwnerID,
 			GrantTypes:   req.GrantTypes,
 		}
-		if err := store.Create(c.Request().Context(), oc); err != nil {
+		if err := repository.CreateOAuthClient(c.Request().Context(), db, oc); err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
-
-		return c.JSON(http.StatusCreated, OAuthClientResponse{
-			ID:           oc.ID,
-			ClientID:     oc.ClientID,
-			ClientSecret: oc.ClientSecret,
-			OwnerID:      oc.OwnerID,
-			GrantTypes:   oc.GrantTypes,
-			CreatedAt:    oc.CreatedAt,
-			UpdatedAt:    oc.UpdatedAt,
-		})
+		return c.JSON(http.StatusCreated, toResponse(oc))
 	}
 }
 
@@ -106,22 +117,13 @@ func CreateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Router      /oauth/clients [get]
 func ListOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		store := repository.NewOAuthClientStore(db)
-		clients, err := store.List(c.Request().Context())
+		clients, err := repository.ListOAuthClients(c.Request().Context(), db)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
 		var resp []OAuthClientResponse
-		for _, oc := range clients {
-			resp = append(resp, OAuthClientResponse{
-				ID:           oc.ID,
-				ClientID:     oc.ClientID,
-				ClientSecret: oc.ClientSecret,
-				OwnerID:      oc.OwnerID,
-				GrantTypes:   oc.GrantTypes,
-				CreatedAt:    oc.CreatedAt,
-				UpdatedAt:    oc.UpdatedAt,
-			})
+		for i := range clients {
+			resp = append(resp, toResponse(&clients[i]))
 		}
 		return c.JSON(http.StatusOK, resp)
 	}
@@ -145,23 +147,14 @@ func GetOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid id"})
 		}
-		store := repository.NewOAuthClientStore(db)
-		oc, err := store.GetByID(c.Request().Context(), id)
+		oc, err := repository.GetOAuthClientByID(c.Request().Context(), db, id)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "OAuth client not found"})
 			}
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
-		return c.JSON(http.StatusOK, OAuthClientResponse{
-			ID:           oc.ID,
-			ClientID:     oc.ClientID,
-			ClientSecret: oc.ClientSecret,
-			OwnerID:      oc.OwnerID,
-			GrantTypes:   oc.GrantTypes,
-			CreatedAt:    oc.CreatedAt,
-			UpdatedAt:    oc.UpdatedAt,
-		})
+		return c.JSON(http.StatusOK, toResponse(oc))
 	}
 }
 
@@ -191,28 +184,20 @@ func UpdateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err := c.Validate(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
 		}
-		store := repository.NewOAuthClientStore(db)
+
 		oc := &model.OAuthClient{
 			ID:           id,
 			ClientSecret: req.ClientSecret,
 			OwnerID:      req.OwnerID,
 			GrantTypes:   req.GrantTypes,
 		}
-		if err := store.Update(c.Request().Context(), oc); err != nil {
+		if err := repository.UpdateOAuthClient(c.Request().Context(), db, oc); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "OAuth client not found"})
 			}
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
-		return c.JSON(http.StatusOK, OAuthClientResponse{
-			ID:           oc.ID,
-			ClientID:     oc.ClientID,
-			ClientSecret: oc.ClientSecret,
-			OwnerID:      oc.OwnerID,
-			GrantTypes:   oc.GrantTypes,
-			CreatedAt:    oc.CreatedAt,
-			UpdatedAt:    oc.UpdatedAt,
-		})
+		return c.JSON(http.StatusOK, toResponse(oc))
 	}
 }
 
@@ -232,8 +217,7 @@ func DeleteOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid id"})
 		}
-		store := repository.NewOAuthClientStore(db)
-		if err := store.Delete(c.Request().Context(), id); err != nil {
+		if err := repository.DeleteOAuthClient(c.Request().Context(), db, id); err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)

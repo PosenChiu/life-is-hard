@@ -30,7 +30,8 @@ type CreateUserOAuthClientRequest struct {
 	// required: true
 	ClientSecret string `json:"client_secret" validate:"required" example:"secret"`
 	// required: true
-	GrantTypes []string `json:"grant_types" validate:"required" example:"[\"password\",\"client_credentials\"]"`
+	// 授權類型，逗號分隔 (password,client_credentials)
+	GrantTypes []string `json:"grant_types" validate:"required" example:"password,client_credentials"`
 }
 
 // UpdateUserOAuthClientRequest payload to update a client for the authenticated user.
@@ -39,22 +40,24 @@ type UpdateUserOAuthClientRequest struct {
 	// required: true
 	ClientSecret string `json:"client_secret" validate:"required" example:"new-secret"`
 	// required: true
-	GrantTypes []string `json:"grant_types" validate:"required" example:"[\"password\"]"`
+	// 授權類型，逗號分隔 (password)
+	GrantTypes []string `json:"grant_types" validate:"required" example:"password"`
 }
 
 // OAuthClientResponse API response for OAuth client.
 // swagger:model OAuthClientResponse
 type OAuthClientResponse struct {
-	ID           int       `json:"id" example:"1"`
-	ClientID     string    `json:"client_id" example:"my-client"`
-	ClientSecret string    `json:"client_secret" example:"secret"`
-	OwnerID      *int      `json:"owner_id" example:"42"`
-	GrantTypes   []string  `json:"grant_types" example:"[\"password\",\"client_credentials\"]"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           int    `json:"id" example:"1"`
+	ClientID     string `json:"client_id" example:"my-client"`
+	ClientSecret string `json:"client_secret" example:"secret"`
+	OwnerID      *int   `json:"owner_id" example:"42"`
+	// 授權類型，逗號分隔 (password,client_credentials)
+	GrantTypes []string  `json:"grant_types" example:"password,client_credentials"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// convertToResponse helper to map model to DTO.
+// convertToResponse maps model to DTO.
 func convertToResponse(c *model.OAuthClient) OAuthClientResponse {
 	return OAuthClientResponse{
 		ID:           c.ID,
@@ -102,18 +105,17 @@ func CreateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
 		}
 
-		// create model
-		store := repository.NewOAuthClientStore(db)
-		oc := model.OAuthClient{
+		// create and persist model
+		oc := &model.OAuthClient{
 			ClientID:     req.ClientID,
 			ClientSecret: req.ClientSecret,
 			OwnerID:      &userID,
 			GrantTypes:   req.GrantTypes,
 		}
-		if err := store.Create(c.Request().Context(), &oc); err != nil {
+		if err := repository.CreateOAuthClient(c.Request().Context(), db, oc); err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
-		return c.JSON(http.StatusCreated, convertToResponse(&oc))
+		return c.JSON(http.StatusCreated, convertToResponse(oc))
 	}
 }
 
@@ -136,13 +138,12 @@ func ListUserOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		}
 		userID := claims.ID
 
-		store := repository.NewOAuthClientStore(db)
-		list, err := store.List(c.Request().Context())
+		all, err := repository.ListOAuthClients(c.Request().Context(), db)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
 		var resp []OAuthClientResponse
-		for _, oc := range list {
+		for _, oc := range all {
 			if oc.OwnerID != nil && *oc.OwnerID == userID {
 				resp = append(resp, convertToResponse(&oc))
 			}
@@ -177,8 +178,7 @@ func GetUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid client_id"})
 		}
-		store := repository.NewOAuthClientStore(db)
-		oc, err := store.GetByID(c.Request().Context(), clientID)
+		oc, err := repository.GetOAuthClientByID(c.Request().Context(), db, clientID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "client not found"})
 		}
@@ -228,8 +228,7 @@ func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
 		}
 
-		store := repository.NewOAuthClientStore(db)
-		oc, err := store.GetByID(c.Request().Context(), clientID)
+		oc, err := repository.GetOAuthClientByID(c.Request().Context(), db, clientID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "client not found"})
 		}
@@ -244,7 +243,7 @@ func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		oc.GrantTypes = req.GrantTypes
 		oc.UpdatedAt = time.Now().UTC()
 
-		if err := store.Update(c.Request().Context(), oc); err != nil {
+		if err := repository.UpdateOAuthClient(c.Request().Context(), db, oc); err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
 		return c.JSON(http.StatusOK, convertToResponse(oc))
@@ -278,8 +277,7 @@ func DeleteUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid client_id"})
 		}
 
-		store := repository.NewOAuthClientStore(db)
-		oc, err := store.GetByID(c.Request().Context(), clientID)
+		oc, err := repository.GetOAuthClientByID(c.Request().Context(), db, clientID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "client not found"})
 		}
@@ -290,7 +288,7 @@ func DeleteUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "client not found"})
 		}
 
-		if err := store.Delete(c.Request().Context(), clientID); err != nil {
+		if err := repository.DeleteOAuthClient(c.Request().Context(), db, clientID); err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)
