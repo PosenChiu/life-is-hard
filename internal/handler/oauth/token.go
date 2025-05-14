@@ -29,12 +29,6 @@ type TokenRequest struct {
 	// OAuth2 grant type: "password", "client_credentials", or "refresh_token"
 	// required: true
 	GrantType string `form:"grant_type" validate:"required" example:"password"`
-	// OAuth2 client ID
-	// required: true
-	ClientID string `form:"client_id" validate:"required" example:"my-client"`
-	// OAuth2 client secret
-	// required: true
-	ClientSecret string `form:"client_secret" validate:"required" example:"secret"`
 	// Username (required if grant_type=password)
 	Username string `form:"username" example:"alice"`
 	// Password (required if grant_type=password)
@@ -43,6 +37,10 @@ type TokenRequest struct {
 	RefreshToken string `form:"refresh_token" example:"I6gwLg8K..."`
 	// Scope (optional) – space or comma separated
 	Scope string `form:"scope" example:"read write"`
+
+	// ClientID and ClientSecret are extracted from the Authorization header.
+	ClientID     string `swaggerignore:"true"`
+	ClientSecret string `swaggerignore:"true"`
 }
 
 // TokenResponse defines the JSON output format of the token endpoint.
@@ -73,9 +71,8 @@ type RefreshTokenData struct {
 // @Tags        oauth
 // @Accept      application/x-www-form-urlencoded
 // @Produce     json
+// @Param       Authorization header string true  "Basic base64(client_id:client_secret)"
 // @Param       grant_type     formData string true  "Grant type: password, client_credentials, or refresh_token"
-// @Param       client_id      formData string true  "OAuth2 client ID"
-// @Param       client_secret  formData string true  "OAuth2 client secret"
 // @Param       username       formData string false "Username (required for password grant)"
 // @Param       password       formData string false "Password (required for password grant)"
 // @Param       refresh_token  formData string false "Refresh token (required for refresh_token grant)"
@@ -89,13 +86,36 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		var req TokenRequest
-		// Bind and validate the form input
+
+		// Bind and validate form input (excluding client credentials)
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request"})
 		}
 		if err := c.Validate(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
 		}
+
+		// --- parse client credentials from Authorization header ---
+		authHeader := c.Request().Header.Get(echo.HeaderAuthorization)
+		if authHeader == "" {
+			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "missing authorization header"})
+		}
+		const prefix = "Basic "
+		if !strings.HasPrefix(authHeader, prefix) {
+			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid authorization header"})
+		}
+		decoded, err := base64.StdEncoding.DecodeString(authHeader[len(prefix):])
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid authorization header"})
+		}
+		parts := strings.SplitN(string(decoded), ":", 2)
+		if len(parts) != 2 {
+			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid authorization header"})
+		}
+		req.ClientID = parts[0]
+		req.ClientSecret = parts[1]
+		// ------------------------------------------------------------
+
 		// Normalize and check grant_type
 		grantType := strings.ToLower(req.GrantType)
 		if grantType != "password" && grantType != "client_credentials" && grantType != "refresh_token" {
@@ -112,6 +132,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 				return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request"})
 			}
 		}
+
 		// Authenticate the client using client_id and client_secret
 		oc, err := repository.GetOAuthClientByClientID(ctx, db, req.ClientID)
 		if err != nil {

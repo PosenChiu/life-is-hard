@@ -82,6 +82,8 @@ func toResponse(c *model.OAuthClient) OAuthClientResponse {
 // @Failure     400     {object} dto.HTTPError
 // @Failure     500     {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /oauth/clients [post]
 func CreateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -114,6 +116,8 @@ func CreateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Success     200 {array} OAuthClientResponse
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /oauth/clients [get]
 func ListOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -140,6 +144,8 @@ func ListOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404  {object} dto.HTTPError
 // @Failure     500  {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /oauth/clients/{id} [get]
 func GetOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -170,6 +176,8 @@ func GetOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404     {object} dto.HTTPError
 // @Failure     500     {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /oauth/clients/{id} [put]
 func UpdateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -210,6 +218,8 @@ func UpdateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     400  {object} dto.HTTPError
 // @Failure     500  {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /oauth/clients/{id} [delete]
 func DeleteOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {

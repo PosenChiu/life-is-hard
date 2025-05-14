@@ -72,6 +72,8 @@ type UserResponse struct {
 // @Failure     400      {object} dto.HTTPError
 // @Failure     500      {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users [post]
 func CreateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -129,6 +131,8 @@ func CreateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     401 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me [delete]
 func DeleteMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -158,6 +162,8 @@ func DeleteMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     400  {object}  dto.HTTPError  "參數錯誤"
 // @Failure     500  {object}  dto.HTTPError  "伺服器錯誤"
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/{id} [delete]
 func DeleteUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -187,6 +193,8 @@ func DeleteUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     401 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me [get]
 func GetMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -226,6 +234,8 @@ func GetMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404  {object}  dto.HTTPError  "使用者不存在"
 // @Failure     500  {object}  dto.HTTPError  "伺服器錯誤"
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/{id} [get]
 func GetUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -271,6 +281,8 @@ type ResetUserPasswordResponse struct {
 // @Failure     400  {object}  dto.HTTPError
 // @Failure     500  {object}  dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/{id}/reset_password [post]
 func ResetUserPasswordHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -346,6 +358,8 @@ type UpdateMeRequest struct {
 // @Failure     401   {object} dto.HTTPError
 // @Failure     500   {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me [put]
 func UpdateMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -410,6 +424,8 @@ type UpdatePasswordMeRequest struct {
 // @Failure     401      {object} dto.HTTPError
 // @Failure     500      {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me/password [patch]
 func UpdatePasswordMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -486,6 +502,8 @@ type UpdateUserRequest struct {
 // @Failure     404      {object} dto.HTTPError
 // @Failure     500      {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/{id} [put]
 func UpdateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {

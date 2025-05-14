@@ -7,6 +7,10 @@
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name Authorization
+// @securityDefinitions.oauth2.application OAuth2Application
+// @tokenUrl /api/oauth/token
+// @securityDefinitions.oauth2.password OAuth2Password
+// @tokenUrl /api/oauth/token
 package main
 
 import (

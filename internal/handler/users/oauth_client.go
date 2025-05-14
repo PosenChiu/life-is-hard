@@ -85,6 +85,8 @@ func convertToResponse(c *model.OAuthClient) OAuthClientResponse {
 // @Failure     401 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me/oauth/clients [post]
 func CreateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -128,6 +130,8 @@ func CreateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     401 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me/oauth/clients [get]
 func ListUserOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -164,6 +168,8 @@ func ListUserOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me/oauth/clients/{client_id} [get]
 func GetUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -205,6 +211,8 @@ func GetUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me/oauth/clients/{client_id} [put]
 func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -262,6 +270,8 @@ func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Failure     404 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
+// @Security    OAuth2Application
+// @Security    OAuth2Password
 // @Router      /users/me/oauth/clients/{client_id} [delete]
 func DeleteUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
