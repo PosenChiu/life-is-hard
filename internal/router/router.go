@@ -38,7 +38,14 @@ func Setup(e *echo.Echo, db *pgxpool.Pool, rdb *redis.Client) {
 	apiUsersMe.DELETE("", users.DeleteMeHandler(db))
 	apiUsersMe.PATCH("/password", users.UpdatePasswordMeHandler(db))
 
-	apiOauthClients := api.Group("/oauth/clients", middleware.RequireAdmin)
+	apiUsersMeClients := apiUsersMe.Group("/clients", middleware.RequireAuth)
+	apiUsersMeClients.POST("", users.CreateUserOAuthClientHandler(db))
+	apiUsersMeClients.GET("", users.ListUserOAuthClientsHandler(db))
+	apiUsersMeClients.GET("/:client_id", users.GetUserOAuthClientHandler(db))
+	apiUsersMeClients.PUT("/:client_id", users.UpdateUserOAuthClientHandler(db))
+	apiUsersMeClients.DELETE("/:client_id", users.DeleteUserOAuthClientHandler(db))
+
+	apiOauthClients := api.Group("/clients", middleware.RequireAdmin)
 	apiOauthClients.POST("", oauth.CreateOAuthClientHandler(db))
 	apiOauthClients.GET("", oauth.ListOAuthClientsHandler(db))
 	apiOauthClients.GET("/:id", oauth.GetOAuthClientHandler(db))
