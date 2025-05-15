@@ -1,13 +1,9 @@
+// File: internal/handler/oauth/token.go
 package oauth
 
 import (
-	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -16,53 +12,31 @@ import (
 	"life-is-hard/internal/repository"
 	"life-is-hard/internal/service"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/redis/go-redis/v9"
 )
 
-// TokenRequest defines the expected form fields for the OAuth2 token endpoint request.
+// TokenRequest 定義請求欄位
 // swagger:model TokenRequest
 type TokenRequest struct {
-	// OAuth2 grant type: "password", "client_credentials", or "refresh_token"
-	// required: true
-	GrantType string `form:"grant_type" validate:"required" example:"password"`
-	// Username (required if grant_type=password)
-	Username string `form:"username" example:"alice"`
-	// Password (required if grant_type=password)
-	Password string `form:"password" example:"Secret123!"`
-	// Refresh token (required if grant_type=refresh_token)
-	RefreshToken string `form:"refresh_token" example:"I6gwLg8K..."`
-	// Scope (optional) – space or comma separated
-	Scope string `form:"scope" example:"read write"`
-
-	// ClientID and ClientSecret are extracted from the Authorization header.
+	GrantType    string `form:"grant_type" validate:"required" example:"password"`
+	Username     string `form:"username" example:"user@example.com"`
+	Password     string `form:"password" example:"password"`
+	RefreshToken string `form:"refresh_token" example:"..."`
+	Scope        string `form:"scope" example:"read write"`
 	ClientID     string `swaggerignore:"true"`
 	ClientSecret string `swaggerignore:"true"`
 }
 
-// TokenResponse defines the JSON output format of the token endpoint.
+// TokenResponse 定義回傳資料格式
 // swagger:model TokenResponse
 type TokenResponse struct {
-	// JWT access token
-	AccessToken string `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-	// Token type (always "Bearer")
-	TokenType string `json:"token_type" example:"Bearer"`
-	// Expiration time in seconds
-	ExpiresIn int `json:"expires_in" example:"86400"`
-	// Refresh token to obtain new access tokens
-	RefreshToken string `json:"refresh_token,omitempty" example:"I6gwLg8KGE2oIyJVwQc8fw..."`
-	// Scope of the access token
-	Scope string `json:"scope" example:"read write"`
-}
-
-// RefreshTokenData is the structure stored in Redis for each refresh token
-type RefreshTokenData struct {
-	UserID   int    `json:"user_id"`
-	ClientID string `json:"client_id"`
-	Scope    string `json:"scope"`
+	AccessToken  string `json:"access_token" example:"..."`
+	TokenType    string `json:"token_type" example:"Bearer"`
+	ExpiresIn    int    `json:"expires_in" example:"86400"`
+	RefreshToken string `json:"refresh_token,omitempty" example:"..."`
+	Scope        string `json:"scope" example:"read write"`
 }
 
 // TokenHandler handles the OAuth2 token endpoint (POST /api/oauth/token).
@@ -86,25 +60,17 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		var req TokenRequest
-
-		// Bind and validate form input (excluding client credentials)
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request"})
-		}
-		if err := c.Validate(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request payload"})
 		}
 
-		// --- parse client credentials from Authorization header ---
-		authHeader := c.Request().Header.Get(echo.HeaderAuthorization)
-		if authHeader == "" {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "missing authorization header"})
-		}
+		// 解析 Basic 認證
+		auth := c.Request().Header.Get("Authorization")
 		const prefix = "Basic "
-		if !strings.HasPrefix(authHeader, prefix) {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid authorization header"})
+		if !strings.HasPrefix(auth, prefix) {
+			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid authorization header"})
 		}
-		decoded, err := base64.StdEncoding.DecodeString(authHeader[len(prefix):])
+		decoded, err := base64.StdEncoding.DecodeString(auth[len(prefix):])
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid authorization header"})
 		}
@@ -114,162 +80,89 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 		}
 		req.ClientID = parts[0]
 		req.ClientSecret = parts[1]
-		// ------------------------------------------------------------
 
-		// Normalize and check grant_type
-		grantType := strings.ToLower(req.GrantType)
-		if grantType != "password" && grantType != "client_credentials" && grantType != "refresh_token" {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "unsupported grant_type"})
-		}
-		// Ensure required fields for each grant type
-		if grantType == "password" {
-			if req.Username == "" || req.Password == "" {
-				return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request"})
-			}
-		}
-		if grantType == "refresh_token" {
-			if req.RefreshToken == "" {
-				return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request"})
-			}
-		}
-
-		// Authenticate the client using client_id and client_secret
+		// 驗證 client
 		oc, err := repository.GetOAuthClientByClientID(ctx, db, req.ClientID)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid client"})
-			}
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+		if err != nil || oc.ClientSecret != req.ClientSecret {
+			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid client credentials"})
 		}
-		if oc.ClientSecret != req.ClientSecret {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid client"})
-		}
-		// Check if client is allowed to use this grant type
-		if grantType != "refresh_token" {
-			allowed := false
-			for _, g := range oc.GrantTypes {
-				if g == grantType {
-					allowed = true
-					break
-				}
-			}
-			if !allowed {
-				return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "unauthorized grant_type"})
+
+		// 檢查 grant_type
+		allowed := false
+		for _, gt := range oc.GrantTypes {
+			if gt == req.GrantType {
+				allowed = true
+				break
 			}
 		}
-		// Prepare for token issuance
-		var user *model.User
-		scope := req.Scope // requested scope (could be empty or not)
-		if grantType == "password" {
-			// Verify user credentials
-			u, err := repository.GetUserByName(ctx, db, req.Username)
+		if !allowed {
+			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "unauthorized grant_type"})
+		}
+
+		var tokenStr, newRefreshToken string
+		scope := req.Scope
+
+		switch req.GrantType {
+		case "password":
+			// 驗證使用者憑證
+			userRec, err := repository.GetUserByName(ctx, db, req.Username)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid credentials"})
 			}
-			authUser, err := service.AuthenticateUser(ctx, *u, req.Password)
+			authUser, err := service.AuthenticateUser(ctx, *userRec, req.Password)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid credentials"})
 			}
-			user = authUser
-		}
-		if grantType == "refresh_token" {
-			// Validate the provided refresh token via Redis
-			key := "refresh_token:" + req.RefreshToken
-			val, err := rdb.Get(ctx, key).Result()
+
+			// 發行 access token
+			tokenStr, err = service.IssueAccessToken(*authUser, 24*time.Hour)
 			if err != nil {
-				if err == redis.Nil {
-					return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid refresh token"})
-				}
-				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: fmt.Sprintf("failed to verify refresh token: %v", err)})
+				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue token"})
 			}
-			var rtData RefreshTokenData
-			if jsonErr := json.Unmarshal([]byte(val), &rtData); jsonErr != nil {
-				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to verify refresh token"})
+
+			// 發行 refresh token
+			newRefreshToken, err = service.IssueRefreshToken(ctx, rdb, authUser.ID, oc.ClientID, scope, 30*24*time.Hour)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue refresh token"})
 			}
-			// Ensure the refresh token belongs to the same client
-			if rtData.ClientID != req.ClientID {
+
+		case "client_credentials":
+			// 為 client 自身（由 owner）發行 access token
+			owner, err := repository.GetUserByID(ctx, db, oc.OwnerID)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to retrieve client owner"})
+			}
+
+			tokenStr, err = service.IssueClientAccessToken(*owner, *oc, 24*time.Hour)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue token"})
+			}
+
+		case "refresh_token":
+			// 驗證並讀取 refresh token
+			data, err := service.ValidateRefreshToken(ctx, rdb, req.RefreshToken)
+			if err != nil {
 				return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid refresh token"})
 			}
-			// If the token is tied to a user, fetch the latest user data
-			if rtData.UserID != 0 {
-				u, err := repository.GetUserByID(ctx, db, rtData.UserID)
-				if err != nil {
-					if errors.Is(err, pgx.ErrNoRows) {
-						return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid refresh token"})
-					}
-					return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
-				}
-				user = u
+			// 重新發行 access token
+			tokenStr, err = service.IssueAccessToken(model.User{ID: data.UserID, IsAdmin: false}, 24*time.Hour)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue token"})
 			}
-			// Use the scope from the original token
-			scope = rtData.Scope
+			// reuse same refresh token
+			newRefreshToken = req.RefreshToken
+
+		default:
+			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "unsupported grant_type"})
 		}
-		// Issue a new JWT access token
-		secret := os.Getenv("JWT_SECRET")
-		if secret == "" {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue token: configuration error"})
-		}
-		now := time.Now()
-		expiresAt := now.Add(24 * time.Hour)
-		claims := jwt.MapClaims{
-			"iss":       "life-is-hard",
-			"exp":       expiresAt.Unix(),
-			"client_id": oc.ClientID,
-		}
-		if user != nil {
-			// Token on behalf of a user
-			claims["sub"] = fmt.Sprint(user.ID)
-			claims["id"] = user.ID
-			claims["is_admin"] = user.IsAdmin
-		} else {
-			// Token for client itself (no user)
-			claims["sub"] = oc.ClientID
-		}
-		if scope != "" {
-			claims["scope"] = scope
-		}
-		tokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		tokenStr, err := tokenObj.SignedString([]byte(secret))
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: fmt.Sprintf("failed to issue token: %v", err)})
-		}
-		// Generate a refresh token if appropriate
-		var newRefreshToken string
-		if grantType == "password" {
-			// Create a new random refresh token and store it
-			if newRefreshToken, err = generateRandomToken(32); err != nil {
-				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: fmt.Sprintf("failed to issue token: %v", err)})
-			}
-			rtData := RefreshTokenData{
-				UserID:   user.ID,
-				ClientID: oc.ClientID,
-				Scope:    scope,
-			}
-			dataBytes, _ := json.Marshal(rtData)
-			if err := rdb.Set(ctx, "refresh_token:"+newRefreshToken, dataBytes, 24*30*time.Hour).Err(); err != nil {
-				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: fmt.Sprintf("failed to issue token: %v", err)})
-			}
-		}
-		// Build response
+
 		resp := TokenResponse{
-			AccessToken: tokenStr,
-			TokenType:   "Bearer",
-			ExpiresIn:   int(time.Until(expiresAt).Seconds()),
-			Scope:       scope,
-		}
-		if newRefreshToken != "" {
-			resp.RefreshToken = newRefreshToken
+			AccessToken:  tokenStr,
+			TokenType:    "Bearer",
+			ExpiresIn:    86400,
+			RefreshToken: newRefreshToken,
+			Scope:        scope,
 		}
 		return c.JSON(http.StatusOK, resp)
 	}
-}
-
-// generateRandomToken creates a URL-safe random token string of n bytes
-func generateRandomToken(n int) (string, error) {
-	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	// Encode to URL-safe base64 (no padding)
-	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(b), nil
 }

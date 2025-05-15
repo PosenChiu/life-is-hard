@@ -3,6 +3,9 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,11 +13,15 @@ import (
 
 	"life-is-hard/internal/model"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // CustomClaims 定義 JWT 負載內容
+// 包含 userID, clientID, isAdmin 以及標準註冊聲明
+// 可以用於 access token
 type CustomClaims struct {
 	ID       int  `json:"id,omitempty"`
 	ClientID int  `json:"client_id,omitempty"`
@@ -38,14 +45,12 @@ func ComparePassword(hash, password string) error {
 
 // AuthenticateUser 根據使用者結構和明文密碼驗證，成功回傳使用者
 func AuthenticateUser(ctx context.Context, user model.User, password string) (*model.User, error) {
-	// 如果資料表未存密碼 (PasswordHash 為 nil)
 	if user.PasswordHash == nil {
 		if password == "" {
 			return &user, nil
 		}
 		return nil, errors.New("invalid password")
 	}
-	// 使用 ComparePassword 進行 bcrypt 比對
 	if err := ComparePassword(*user.PasswordHash, password); err != nil {
 		return nil, errors.New("invalid password")
 	}
@@ -74,6 +79,7 @@ func IssueAccessToken(user model.User, ttl time.Duration) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
+// IssueClientAccessToken 依據使用者與 client 資訊產生 JWT
 func IssueClientAccessToken(user model.User, client model.OAuthClient, ttl time.Duration) (string, error) {
 	if user.ID != client.OwnerID {
 		return "", fmt.Errorf("user %d is not the owner of client %d", user.ID, client.ID)
@@ -123,4 +129,48 @@ func VerifyAccessToken(tokenString string) (*CustomClaims, error) {
 	}
 
 	return claims, nil
+}
+
+// RefreshTokenData 定義儲存在 Redis 中的資料結構
+// 包含 userID, clientID, 以及 scope
+type RefreshTokenData struct {
+	UserID   int    `json:"user_id"`
+	ClientID string `json:"client_id"`
+	Scope    string `json:"scope"`
+}
+
+// IssueRefreshToken 產生並儲存 refresh token
+func IssueRefreshToken(ctx context.Context, rdb *redis.Client, userID int, clientID string, scope string, ttl time.Duration) (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+	token := base64.RawURLEncoding.EncodeToString(b)
+	data := RefreshTokenData{UserID: userID, ClientID: clientID, Scope: scope}
+	bytesData, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal refresh token data: %w", err)
+	}
+	key := fmt.Sprintf("refresh_token:%s", token)
+	if err := rdb.Set(ctx, key, bytesData, ttl).Err(); err != nil {
+		return "", fmt.Errorf("failed to store refresh token: %w", err)
+	}
+	return token, nil
+}
+
+// ValidateRefreshToken 驗證並讀取儲存在 Redis 的 refresh token
+func ValidateRefreshToken(ctx context.Context, rdb *redis.Client, token string) (*RefreshTokenData, error) {
+	key := fmt.Sprintf("refresh_token:%s", token)
+	val, err := rdb.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, fmt.Errorf("refresh token not found or expired")
+		}
+		return nil, fmt.Errorf("failed to retrieve refresh token: %w", err)
+	}
+	var data RefreshTokenData
+	if err := json.Unmarshal([]byte(val), &data); err != nil {
+		return nil, fmt.Errorf("failed to parse refresh token data: %w", err)
+	}
+	return &data, nil
 }
