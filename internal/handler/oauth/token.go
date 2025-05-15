@@ -97,7 +97,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 			}
 
 			// 發行 refresh token
-			newRefreshToken, err = service.IssueRefreshToken(ctx, rdb, authUser.ID, oc.ClientID, 30*24*time.Hour)
+			newRefreshToken, err = service.IssueRefreshToken(ctx, rdb, authUser.ID, oc.ClientID, authUser.IsAdmin, 30*24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue refresh token"})
 			}

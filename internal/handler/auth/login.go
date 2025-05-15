@@ -57,12 +57,6 @@ func LoginHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: fmt.Sprintf("failed to issue token: %v", err)})
 		}
 
-		// 回傳 JWT 及到期時間
-		expiresAt := time.Now().Add(24 * time.Hour)
-		resp := dto.LoginResponse{
-			AccessToken: token,
-			ExpiresAt:   expiresAt,
-		}
-		return c.JSON(http.StatusOK, resp)
+		return c.JSON(http.StatusOK, dto.LoginResponse{AccessToken: token})
 	}
 }
