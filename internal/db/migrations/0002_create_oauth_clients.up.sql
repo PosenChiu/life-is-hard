@@ -9,3 +9,12 @@ CREATE TABLE oauth_clients (
 );
 
 CREATE INDEX idx_oauth_clients_client_id ON oauth_clients(client_id);
+
+INSERT INTO oauth_clients (client_id, client_secret, owner_id, grant_types)
+SELECT
+  'admin',
+  'admin',
+  id,
+  ARRAY['password','client_credentials','refresh_token']::TEXT[]
+FROM users
+WHERE name = 'admin';
