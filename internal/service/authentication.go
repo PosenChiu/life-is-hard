@@ -140,13 +140,13 @@ type RefreshTokenData struct {
 }
 
 // IssueRefreshToken 產生並儲存 refresh token
-func IssueRefreshToken(ctx context.Context, rdb *redis.Client, userID int, clientID string, scope string, ttl time.Duration) (string, error) {
+func IssueRefreshToken(ctx context.Context, rdb *redis.Client, userID int, clientID string, ttl time.Duration) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 	token := base64.RawURLEncoding.EncodeToString(b)
-	data := RefreshTokenData{UserID: userID, ClientID: clientID, Scope: scope}
+	data := RefreshTokenData{UserID: userID, ClientID: clientID}
 	bytesData, err := json.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal refresh token data: %w", err)

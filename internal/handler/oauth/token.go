@@ -36,7 +36,6 @@ type TokenResponse struct {
 	TokenType    string `json:"token_type" example:"Bearer"`
 	ExpiresIn    int    `json:"expires_in" example:"86400"`
 	RefreshToken string `json:"refresh_token,omitempty" example:"..."`
-	Scope        string `json:"scope" example:"read write"`
 }
 
 // TokenHandler handles the OAuth2 token endpoint (POST /api/oauth/token).
@@ -50,7 +49,6 @@ type TokenResponse struct {
 // @Param       username       formData string false "Username (required for password grant)"
 // @Param       password       formData string false "Password (required for password grant)"
 // @Param       refresh_token  formData string false "Refresh token (required for refresh_token grant)"
-// @Param       scope          formData string false "Requested scope (optional)"
 // @Success     200 {object} TokenResponse
 // @Failure     400 {object} dto.HTTPError
 // @Failure     401 {object} dto.HTTPError
@@ -100,7 +98,6 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 		}
 
 		var tokenStr, newRefreshToken string
-		scope := req.Scope
 
 		switch req.GrantType {
 		case "password":
@@ -121,7 +118,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 			}
 
 			// 發行 refresh token
-			newRefreshToken, err = service.IssueRefreshToken(ctx, rdb, authUser.ID, oc.ClientID, scope, 30*24*time.Hour)
+			newRefreshToken, err = service.IssueRefreshToken(ctx, rdb, authUser.ID, oc.ClientID, 30*24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue refresh token"})
 			}
@@ -161,7 +158,6 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 			TokenType:    "Bearer",
 			ExpiresIn:    86400,
 			RefreshToken: newRefreshToken,
-			Scope:        scope,
 		}
 		return c.JSON(http.StatusOK, resp)
 	}
