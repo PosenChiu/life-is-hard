@@ -56,9 +56,13 @@ PROMPT_FILES := config.mk go.mod go.sum
 
 define FORMAT_FILE_TO_MD
 printf '## %s\n\n' "$(1)" >> "$(2)"
-printf '``````\n'         >> "$(2)"
+printf '````````````````' >> "$(2)"
+printf '\n'               >> "$(2)"
 cat "$(1)"                >> "$(2)"
-printf '\n``````\n\n'     >> "$(2)"
+printf '\n'               >> "$(2)"
+printf '````````````````' >> "$(2)"
+printf '\n'               >> "$(2)"
+printf '\n'               >> "$(2)"
 endef
 
 .PHONY: prompt
@@ -69,5 +73,5 @@ prompt: $(PROMPT_FILES) $(sort $(foreach dir,$(PROMPT_DIRS),$(call rglob,$(dir),
 	@$(foreach f,$^,$(call FORMAT_FILE_TO_MD,$f,$@/code.md);)
 	@printf 'LAYOUT.md\n' >> $@/.gitignore
 	@printf '# Directory Layout\n\n' > $@/LAYOUT.md
-	@$(foreach f,$^,printf '%s %s\n' "-" "$f" >> $@/LAYOUT.md;)
+	@$(foreach f,$^,printf '%s %s\n' "##" "$f" >> $@/LAYOUT.md;)
 	@printf 'Prompt: \033[36mRead the README.md LAYOUT.md CODE.md I provided before typing my question.\033[0m\n'
