@@ -96,7 +96,7 @@ func CreateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if !ok || claimsRaw == nil {
 			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
 		}
-		userID := claims.ID
+		userID := claims.UserID
 
 		// bind and validate
 		var req CreateUserOAuthClientRequest
@@ -140,7 +140,7 @@ func ListUserOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if !ok || claimsRaw == nil {
 			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
 		}
-		userID := claims.ID
+		userID := claims.UserID
 
 		all, err := repository.ListOAuthClients(c.Request().Context(), db)
 		if err != nil {
@@ -178,7 +178,7 @@ func GetUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if !ok || claimsRaw == nil {
 			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
 		}
-		userID := claims.ID
+		userID := claims.UserID
 
 		clientID, err := strconv.Atoi(c.Param("client_id"))
 		if err != nil {
@@ -221,7 +221,7 @@ func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if !ok || claimsRaw == nil {
 			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
 		}
-		userID := claims.ID
+		userID := claims.UserID
 
 		clientID, err := strconv.Atoi(c.Param("client_id"))
 		if err != nil {
@@ -280,7 +280,7 @@ func DeleteUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if !ok || claimsRaw == nil {
 			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
 		}
-		userID := claims.ID
+		userID := claims.UserID
 
 		clientID, err := strconv.Atoi(c.Param("client_id"))
 		if err != nil {

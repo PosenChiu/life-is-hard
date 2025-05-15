@@ -144,7 +144,7 @@ func DeleteMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 		}
 
 		// 刪除當前使用者
-		if err := repository.DeleteUser(c.Request().Context(), pool, claims.ID); err != nil {
+		if err := repository.DeleteUser(c.Request().Context(), pool, claims.UserID); err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
 
@@ -206,7 +206,7 @@ func GetMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 		}
 
 		// 根據 claims.ID 查詢使用者
-		user, err := repository.GetUserByID(c.Request().Context(), pool, claims.ID)
+		user, err := repository.GetUserByID(c.Request().Context(), pool, claims.UserID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
@@ -387,7 +387,7 @@ func UpdateMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 
 		// Build model and update
 		user := &model.User{
-			ID:    claims.ID,
+			ID:    claims.UserID,
 			Name:  req.Name,
 			Email: req.Email,
 		}
@@ -446,7 +446,7 @@ func UpdatePasswordMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 		}
 
 		// Fetch user from DB
-		user, err := repository.GetUserByID(c.Request().Context(), pool, claims.ID)
+		user, err := repository.GetUserByID(c.Request().Context(), pool, claims.UserID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
@@ -463,7 +463,7 @@ func UpdatePasswordMeHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 		}
 
 		// Update password
-		if err := repository.UpdateUserPassword(c.Request().Context(), pool, claims.ID, hash); err != nil {
+		if err := repository.UpdateUserPassword(c.Request().Context(), pool, claims.UserID, hash); err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
 

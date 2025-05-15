@@ -23,7 +23,7 @@ import (
 // 包含 userID, clientID, isAdmin 以及標準註冊聲明
 // 可以用於 access token
 type CustomClaims struct {
-	ID       int  `json:"id,omitempty"`
+	UserID   int  `json:"user_id,omitempty"`
 	ClientID int  `json:"client_id,omitempty"`
 	IsAdmin  bool `json:"is_admin,omitempty"`
 	jwt.RegisteredClaims
@@ -66,7 +66,7 @@ func IssueAccessToken(user model.User, ttl time.Duration) (string, error) {
 
 	now := time.Now()
 	claims := CustomClaims{
-		ID:      user.ID,
+		UserID:  user.ID,
 		IsAdmin: user.IsAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   fmt.Sprint(user.ID),
@@ -92,7 +92,7 @@ func IssueClientAccessToken(user model.User, client model.OAuthClient, ttl time.
 
 	now := time.Now()
 	claims := CustomClaims{
-		ID:       user.ID,
+		UserID:   user.ID,
 		ClientID: client.ID,
 		IsAdmin:  user.IsAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
