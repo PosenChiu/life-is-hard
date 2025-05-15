@@ -29,7 +29,7 @@ type CreateOAuthClientRequest struct {
 	// required: true
 	ClientSecret string `json:"client_secret" validate:"required" example:"secret"`
 	// optional: 擁有者 user_id
-	OwnerID *int `json:"owner_id" example:"1"`
+	OwnerID int `json:"owner_id" example:"1"`
 	// required: 授權類型，逗號分隔 (password,client_credentials)
 	GrantTypes []string `json:"grant_types" validate:"required" example:"password,client_credentials"`
 }
@@ -40,7 +40,7 @@ type UpdateOAuthClientRequest struct {
 	// required: true
 	ClientSecret string `json:"client_secret" validate:"required" example:"new-secret"`
 	// optional: 擁有者 user_id
-	OwnerID *int `json:"owner_id" example:"2"`
+	OwnerID int `json:"owner_id" example:"2"`
 	// required: 授權類型，逗號分隔 (password,client_credentials)
 	GrantTypes []string `json:"grant_types" validate:"required" example:"password,client_credentials"`
 }
@@ -51,7 +51,7 @@ type OAuthClientResponse struct {
 	ID           int    `json:"id" example:"1"`
 	ClientID     string `json:"client_id" example:"my-client"`
 	ClientSecret string `json:"client_secret" example:"secret"`
-	OwnerID      *int   `json:"owner_id" example:"1"`
+	OwnerID      int    `json:"owner_id" example:"1"`
 	// 授權類型陣列，用逗號分隔表示 (password,client_credentials)
 	GrantTypes []string `json:"grant_types" example:"password,client_credentials"`
 	CreatedAt  string   `json:"created_at" example:"2025-05-14T06:30:00Z"`

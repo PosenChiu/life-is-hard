@@ -16,8 +16,9 @@ import (
 
 // CustomClaims 定義 JWT 負載內容
 type CustomClaims struct {
-	ID      int  `json:"id"`
-	IsAdmin bool `json:"is_admin"`
+	ID       int  `json:"id,omitempty"`
+	ClientID int  `json:"client_id,omitempty"`
+	IsAdmin  bool `json:"is_admin,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -64,6 +65,32 @@ func IssueAccessToken(user model.User, ttl time.Duration) (string, error) {
 		IsAdmin: user.IsAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   fmt.Sprint(user.ID),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+func IssueClientAccessToken(user model.User, client model.OAuthClient, ttl time.Duration) (string, error) {
+	if user.ID != client.OwnerID {
+		return "", fmt.Errorf("user %d is not the owner of client %d", user.ID, client.ID)
+	}
+
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", fmt.Errorf("JWT_SECRET not set")
+	}
+
+	now := time.Now()
+	claims := CustomClaims{
+		ID:       user.ID,
+		ClientID: client.ID,
+		IsAdmin:  user.IsAdmin,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   fmt.Sprint(client.ID),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},

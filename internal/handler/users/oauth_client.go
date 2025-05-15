@@ -50,7 +50,7 @@ type OAuthClientResponse struct {
 	ID           int    `json:"id" example:"1"`
 	ClientID     string `json:"client_id" example:"my-client"`
 	ClientSecret string `json:"client_secret" example:"secret"`
-	OwnerID      *int   `json:"owner_id" example:"42"`
+	OwnerID      int    `json:"owner_id" example:"42"`
 	// 授權類型，逗號分隔 (password,client_credentials)
 	GrantTypes []string  `json:"grant_types" example:"password,client_credentials"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -111,7 +111,7 @@ func CreateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		oc := &model.OAuthClient{
 			ClientID:     req.ClientID,
 			ClientSecret: req.ClientSecret,
-			OwnerID:      &userID,
+			OwnerID:      userID,
 			GrantTypes:   req.GrantTypes,
 		}
 		if err := repository.CreateOAuthClient(c.Request().Context(), db, oc); err != nil {
@@ -148,7 +148,7 @@ func ListUserOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		}
 		var resp []OAuthClientResponse
 		for _, oc := range all {
-			if oc.OwnerID != nil && *oc.OwnerID == userID {
+			if oc.OwnerID == userID {
 				resp = append(resp, convertToResponse(&oc))
 			}
 		}
@@ -191,7 +191,7 @@ func GetUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
-		if oc.OwnerID == nil || *oc.OwnerID != userID {
+		if oc.OwnerID != userID {
 			return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "client not found"})
 		}
 		return c.JSON(http.StatusOK, convertToResponse(oc))
@@ -243,7 +243,7 @@ func UpdateUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
-		if oc.OwnerID == nil || *oc.OwnerID != userID {
+		if oc.OwnerID != userID {
 			return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "client not found"})
 		}
 
@@ -294,7 +294,7 @@ func DeleteUserOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
-		if oc.OwnerID == nil || *oc.OwnerID != userID {
+		if oc.OwnerID != userID {
 			return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "client not found"})
 		}
 
