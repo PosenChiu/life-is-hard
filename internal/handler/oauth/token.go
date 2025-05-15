@@ -17,27 +17,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// TokenRequest 定義請求欄位
-// swagger:model TokenRequest
-type TokenRequest struct {
-	GrantType    string `form:"grant_type" validate:"required" example:"password"`
-	Username     string `form:"username" example:"user@example.com"`
-	Password     string `form:"password" example:"password"`
-	RefreshToken string `form:"refresh_token" example:"..."`
-	Scope        string `form:"scope" example:"read write"`
-	ClientID     string `swaggerignore:"true"`
-	ClientSecret string `swaggerignore:"true"`
-}
-
-// TokenResponse 定義回傳資料格式
-// swagger:model TokenResponse
-type TokenResponse struct {
-	AccessToken  string `json:"access_token" example:"..."`
-	TokenType    string `json:"token_type" example:"Bearer"`
-	ExpiresIn    int    `json:"expires_in" example:"86400"`
-	RefreshToken string `json:"refresh_token,omitempty" example:"..."`
-}
-
 // TokenHandler handles the OAuth2 token endpoint (POST /api/oauth/token).
 // @Summary     OAuth2 obtain access token
 // @Description Issue a JWT access token (and refresh token if applicable) using OAuth2 grant_type
@@ -49,7 +28,7 @@ type TokenResponse struct {
 // @Param       username       formData string false "Username (required for password grant)"
 // @Param       password       formData string false "Password (required for password grant)"
 // @Param       refresh_token  formData string false "Refresh token (required for refresh_token grant)"
-// @Success     200 {object} TokenResponse
+// @Success     200 {object} dto.TokenResponse
 // @Failure     400 {object} dto.HTTPError
 // @Failure     401 {object} dto.HTTPError
 // @Failure     500 {object} dto.HTTPError
@@ -57,7 +36,7 @@ type TokenResponse struct {
 func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
-		var req TokenRequest
+		var req dto.TokenRequest
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request payload"})
 		}
@@ -153,7 +132,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "unsupported grant_type"})
 		}
 
-		resp := TokenResponse{
+		resp := dto.TokenResponse{
 			AccessToken:  tokenStr,
 			TokenType:    "Bearer",
 			ExpiresIn:    86400,

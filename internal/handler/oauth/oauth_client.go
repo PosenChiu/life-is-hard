@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
 	"life-is-hard/internal/dto"
 	"life-is-hard/internal/model"
@@ -17,57 +16,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// ----------
-// DTOs
-// ----------
-
-// CreateOAuthClientRequest 新增 OAuth client 的請求
-// swagger:model CreateOAuthClientRequest
-type CreateOAuthClientRequest struct {
-	// required: true
-	ClientID string `json:"client_id" validate:"required" example:"my-client"`
-	// required: true
-	ClientSecret string `json:"client_secret" validate:"required" example:"secret"`
-	// optional: 擁有者 user_id
-	OwnerID int `json:"owner_id" example:"1"`
-	// required: 授權類型，逗號分隔 (password,client_credentials)
-	GrantTypes []string `json:"grant_types" validate:"required" example:"password,client_credentials"`
-}
-
-// UpdateOAuthClientRequest 更新 OAuth client 的請求
-// swagger:model UpdateOAuthClientRequest
-type UpdateOAuthClientRequest struct {
-	// required: true
-	ClientSecret string `json:"client_secret" validate:"required" example:"new-secret"`
-	// optional: 擁有者 user_id
-	OwnerID int `json:"owner_id" example:"2"`
-	// required: 授權類型，逗號分隔 (password,client_credentials)
-	GrantTypes []string `json:"grant_types" validate:"required" example:"password,client_credentials"`
-}
-
-// OAuthClientResponse 回傳給客戶端的模型
-// swagger:model OAuthClientResponse
-type OAuthClientResponse struct {
-	ID           int    `json:"id" example:"1"`
-	ClientID     string `json:"client_id" example:"my-client"`
-	ClientSecret string `json:"client_secret" example:"secret"`
-	OwnerID      int    `json:"owner_id" example:"1"`
-	// 授權類型陣列，用逗號分隔表示 (password,client_credentials)
-	GrantTypes []string `json:"grant_types" example:"password,client_credentials"`
-	CreatedAt  string   `json:"created_at" example:"2025-05-14T06:30:00Z"`
-	UpdatedAt  string   `json:"updated_at" example:"2025-05-14T06:30:00Z"`
-}
-
 // toResponse 將 model 轉成 API 回應
-func toResponse(c *model.OAuthClient) OAuthClientResponse {
-	return OAuthClientResponse{
+func toResponse(c *model.OAuthClient) dto.OAuthClientResponse {
+	return dto.OAuthClientResponse{
 		ID:           c.ID,
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 		OwnerID:      c.OwnerID,
 		GrantTypes:   c.GrantTypes,
-		CreatedAt:    c.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:    c.UpdatedAt.Format(time.RFC3339),
+		CreatedAt:    c.CreatedAt,
+		UpdatedAt:    c.UpdatedAt,
 	}
 }
 
@@ -77,8 +35,8 @@ func toResponse(c *model.OAuthClient) OAuthClientResponse {
 // @Tags        oauth
 // @Accept      json
 // @Produce     json
-// @Param       request body CreateOAuthClientRequest true "Create OAuth client request"
-// @Success     201     {object} OAuthClientResponse
+// @Param       request body dto.CreateOAuthClientRequest true "Create OAuth client request"
+// @Success     201     {object} dto.OAuthClientResponse
 // @Failure     400     {object} dto.HTTPError
 // @Failure     500     {object} dto.HTTPError
 // @Security    ApiKeyAuth
@@ -87,7 +45,7 @@ func toResponse(c *model.OAuthClient) OAuthClientResponse {
 // @Router      /oauth/clients [post]
 func CreateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		var req CreateOAuthClientRequest
+		var req dto.CreateOAuthClientRequest
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request"})
 		}
@@ -113,7 +71,7 @@ func CreateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Description 取得所有 OAuth clients
 // @Tags        oauth
 // @Produce     json
-// @Success     200 {array} OAuthClientResponse
+// @Success     200 {array} dto.OAuthClientResponse
 // @Failure     500 {object} dto.HTTPError
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
@@ -125,7 +83,7 @@ func ListOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
 		}
-		var resp []OAuthClientResponse
+		var resp []dto.OAuthClientResponse
 		for i := range clients {
 			resp = append(resp, toResponse(&clients[i]))
 		}
@@ -139,7 +97,7 @@ func ListOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Tags        oauth
 // @Produce     json
 // @Param       id   path int true "OAuth client ID"
-// @Success     200  {object} OAuthClientResponse
+// @Success     200  {object} dto.OAuthClientResponse
 // @Failure     400  {object} dto.HTTPError
 // @Failure     404  {object} dto.HTTPError
 // @Failure     500  {object} dto.HTTPError
@@ -170,8 +128,8 @@ func GetOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Accept      json
 // @Produce     json
 // @Param       id      path int true "OAuth client ID"
-// @Param       request body UpdateOAuthClientRequest true "Update OAuth client request"
-// @Success     200     {object} OAuthClientResponse
+// @Param       request body dto.UpdateOAuthClientRequest true "Update OAuth client request"
+// @Success     200     {object} dto.OAuthClientResponse
 // @Failure     400     {object} dto.HTTPError
 // @Failure     404     {object} dto.HTTPError
 // @Failure     500     {object} dto.HTTPError
@@ -185,7 +143,7 @@ func UpdateOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid id"})
 		}
-		var req UpdateOAuthClientRequest
+		var req dto.UpdateOAuthClientRequest
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid request"})
 		}
