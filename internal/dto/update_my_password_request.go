@@ -1,4 +1,4 @@
-// File: internal/dto/update_password_me_request.go
+// File: internal/dto/update_my_password_request.go
 package dto
 
 // swagger:model dto.UpdateMyPasswordRequest

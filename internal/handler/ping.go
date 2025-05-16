@@ -19,7 +19,7 @@ import (
 // @Accept      json
 // @Produce     json
 // @Success     200 {object} dto.PingResponse
-// @Failure     500 {object} dto.HTTPError
+// @Failure     500 {object} dto.ErrorResponse
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -29,12 +29,12 @@ func PingHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 		ctx := c.Request().Context()
 
 		if err := db.Ping(ctx); err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "database unhealthy"})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "database unhealthy"})
 		}
 
 		err := rdb.Set(ctx, "ping:timestamp", time.Now().Format(time.RFC3339), time.Minute).Err()
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "redis unhealthy"})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "redis unhealthy"})
 		}
 
 		return c.JSON(http.StatusOK, dto.PingResponse{Message: "pong"})

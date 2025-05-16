@@ -1,7 +1,7 @@
-// File: internal/dto/http_error.go
+// File: internal/dto/error_response.go
 package dto
 
 // swagger:model dto.HTTPError
-type HTTPError struct {
+type ErrorResponse struct {
 	Message string `json:"message"`
 }

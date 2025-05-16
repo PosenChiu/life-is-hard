@@ -23,31 +23,31 @@ import (
 // @Param       username formData string true "使用者名稱"
 // @Param       password formData string true "使用者密碼"
 // @Success     200      {object} dto.LoginResponse
-// @Failure     400      {object} dto.HTTPError
-// @Failure     401      {object} dto.HTTPError
-// @Failure     500      {object} dto.HTTPError
+// @Failure     400      {object} dto.ErrorResponse
+// @Failure     401      {object} dto.ErrorResponse
+// @Failure     500      {object} dto.ErrorResponse
 // @Router      /auth/login [post]
 func LoginHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req dto.LoginRequest
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: fmt.Sprintf("無效的表單資料: %v", err)})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: fmt.Sprintf("無效的表單資料: %v", err)})
 		}
 		if err := c.Validate(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		user, err := repository.GetUserByName(c.Request().Context(), pool, req.Username)
 		if err != nil {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid credentials"})
+			return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Message: "invalid credentials"})
 		}
 		if err := service.AuthenticateUser(c.Request().Context(), *user, req.Password); err != nil {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid credentials"})
+			return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Message: "invalid credentials"})
 		}
 
 		token, err := service.IssueAccessToken(*user, 24*time.Hour)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: fmt.Sprintf("failed to issue token: %v", err)})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: fmt.Sprintf("failed to issue token: %v", err)})
 		}
 
 		return c.JSON(http.StatusOK, dto.LoginResponse{AccessToken: token})

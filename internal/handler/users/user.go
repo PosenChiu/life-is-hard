@@ -28,8 +28,8 @@ import (
 // @Param       password formData string true  "使用者密碼"
 // @Param       is_admin formData boolean true  "是否為管理員"
 // @Success     201      {object} dto.UserResponse
-// @Failure     400      {object} dto.HTTPError
-// @Failure     500      {object} dto.HTTPError
+// @Failure     400      {object} dto.ErrorResponse
+// @Failure     500      {object} dto.ErrorResponse
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -38,20 +38,20 @@ func CreateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req dto.CreateUserRequest
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid form data"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid form data"})
 		}
 		if err := c.Validate(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		hash, err := service.HashPassword(req.Password)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "failed to hash password"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "failed to hash password"})
 		}
 
 		req.Email = strings.ToLower(req.Email)
 		if _, err := mail.ParseAddress(req.Email); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid email format"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid email format"})
 		}
 
 		user, err := repository.CreateUser(c.Request().Context(), pool, &model.User{
@@ -61,7 +61,7 @@ func CreateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			IsAdmin:      req.IsAdmin,
 		})
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		return c.JSON(http.StatusCreated, dto.UserResponse{
@@ -81,9 +81,9 @@ func CreateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Produce     json
 // @Param       user_id   path      int  true  "使用者 ID"
 // @Success     200  {object}  dto.UserResponse
-// @Failure     400  {object}  dto.HTTPError  "參數錯誤"
-// @Failure     404  {object}  dto.HTTPError  "使用者不存在"
-// @Failure     500  {object}  dto.HTTPError  "伺服器錯誤"
+// @Failure     400  {object}  dto.ErrorResponse  "參數錯誤"
+// @Failure     404  {object}  dto.ErrorResponse  "使用者不存在"
+// @Failure     500  {object}  dto.ErrorResponse  "伺服器錯誤"
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -92,11 +92,11 @@ func GetUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id, err := strconv.Atoi(c.Param("user_id"))
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid user ID"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid user ID"})
 		}
 		user, err := repository.GetUserByID(c.Request().Context(), pool, id)
 		if err != nil {
-			return c.JSON(http.StatusNotFound, dto.HTTPError{Message: "user not found"})
+			return c.JSON(http.StatusNotFound, dto.ErrorResponse{Message: "user not found"})
 		}
 		return c.JSON(http.StatusOK, dto.UserResponse{
 			ID:        user.ID,
@@ -119,9 +119,9 @@ func GetUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Param       email    formData string true  "使用者 Email (lowercase)"
 // @Param       is_admin formData boolean true "是否為管理員"
 // @Success     204      "No Content"
-// @Failure     400      {object} dto.HTTPError
-// @Failure     404      {object} dto.HTTPError
-// @Failure     500      {object} dto.HTTPError
+// @Failure     400      {object} dto.ErrorResponse
+// @Failure     404      {object} dto.ErrorResponse
+// @Failure     500      {object} dto.ErrorResponse
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -130,20 +130,20 @@ func UpdateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid user ID"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid user ID"})
 		}
 
 		var req dto.UpdateUserRequest
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid form data"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid form data"})
 		}
 		if err := c.Validate(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		req.Email = strings.ToLower(req.Email)
 		if _, err := mail.ParseAddress(req.Email); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid email format"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid email format"})
 		}
 
 		if err := repository.UpdateUser(c.Request().Context(), pool, &model.User{
@@ -151,7 +151,7 @@ func UpdateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			Name:  req.Name,
 			Email: req.Email,
 		}); err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		return c.NoContent(http.StatusNoContent)
@@ -164,8 +164,8 @@ func UpdateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Tags        users
 // @Param       user_id   path      int  true  "使用者 ID"
 // @Success     204  "No Content"
-// @Failure     400  {object}  dto.HTTPError  "參數錯誤"
-// @Failure     500  {object}  dto.HTTPError  "伺服器錯誤"
+// @Failure     400  {object}  dto.ErrorResponse  "參數錯誤"
+// @Failure     500  {object}  dto.ErrorResponse  "伺服器錯誤"
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -174,10 +174,10 @@ func DeleteUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id, err := strconv.Atoi(c.Param("user_id"))
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid user ID"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid user ID"})
 		}
 		if err := repository.DeleteUser(c.Request().Context(), pool, id); err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
@@ -189,8 +189,8 @@ func DeleteUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Tags        users
 // @Produce     json
 // @Success     200 {object} dto.UserResponse
-// @Failure     401 {object} dto.HTTPError
-// @Failure     500 {object} dto.HTTPError
+// @Failure     401 {object} dto.ErrorResponse
+// @Failure     500 {object} dto.ErrorResponse
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -199,11 +199,11 @@ func GetMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
+			return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Message: "invalid or missing token"})
 		}
 		user, err := repository.GetUserByID(c.Request().Context(), pool, claims.UserID)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: err.Error()})
 		}
 		return c.JSON(http.StatusOK, dto.UserResponse{
 			ID:        user.ID,
@@ -224,9 +224,9 @@ func GetMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Param       name  formData string true "使用者姓名"
 // @Param       email formData string true "使用者 Email (lowercase)"
 // @Success     204   "No Content"
-// @Failure     400   {object} dto.HTTPError
-// @Failure     401   {object} dto.HTTPError
-// @Failure     500   {object} dto.HTTPError
+// @Failure     400   {object} dto.ErrorResponse
+// @Failure     401   {object} dto.ErrorResponse
+// @Failure     500   {object} dto.ErrorResponse
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -235,20 +235,20 @@ func UpdateMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req dto.UpdateUserRequest
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid form data"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid form data"})
 		}
 		if err := c.Validate(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
+			return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Message: "invalid or missing token"})
 		}
 
 		req.Email = strings.ToLower(req.Email)
 		if _, err := mail.ParseAddress(req.Email); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid email format"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid email format"})
 		}
 
 		err := repository.UpdateUser(c.Request().Context(), pool, &model.User{
@@ -257,7 +257,7 @@ func UpdateMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			Email: req.Email,
 		})
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		return c.NoContent(http.StatusNoContent)
@@ -273,9 +273,9 @@ func UpdateMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Param       old_password formData string true "當前密碼"
 // @Param       new_password formData string true "新密碼"
 // @Success     204      "No Content"
-// @Failure     400      {object} dto.HTTPError
-// @Failure     401      {object} dto.HTTPError
-// @Failure     500      {object} dto.HTTPError
+// @Failure     400      {object} dto.ErrorResponse
+// @Failure     401      {object} dto.ErrorResponse
+// @Failure     500      {object} dto.ErrorResponse
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -284,33 +284,33 @@ func UpdateMyUserPasswordHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req dto.UpdateMyPasswordRequest
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: "invalid form data"})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: "invalid form data"})
 		}
 		if err := c.Validate(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusBadRequest, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
+			return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Message: "invalid or missing token"})
 		}
 
 		user, err := repository.GetUserByID(c.Request().Context(), pool, claims.UserID)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		if err := service.AuthenticateUser(c.Request().Context(), *user, req.OldPassword); err != nil {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid current password"})
+			return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Message: "invalid current password"})
 		}
 
 		hash, err := service.HashPassword(req.NewPassword)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to hash new password"})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "failed to hash new password"})
 		}
 
 		if err := repository.UpdateUserPassword(c.Request().Context(), pool, claims.UserID, hash); err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: err.Error()})
 		}
 
 		return c.NoContent(http.StatusNoContent)
@@ -323,8 +323,8 @@ func UpdateMyUserPasswordHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 // @Tags        users
 // @Produce     json
 // @Success     204
-// @Failure     401 {object} dto.HTTPError
-// @Failure     500 {object} dto.HTTPError
+// @Failure     401 {object} dto.ErrorResponse
+// @Failure     500 {object} dto.ErrorResponse
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -333,10 +333,10 @@ func DeleteMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {
-			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid or missing token"})
+			return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Message: "invalid or missing token"})
 		}
 		if err := repository.DeleteUser(c.Request().Context(), pool, claims.UserID); err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: err.Error()})
+			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
