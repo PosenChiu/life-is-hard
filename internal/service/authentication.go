@@ -20,10 +20,16 @@ import (
 )
 
 type CustomClaims struct {
-	UserID   int  `json:"user_id,omitempty"`
-	ClientID int  `json:"client_id,omitempty"`
-	IsAdmin  bool `json:"is_admin,omitempty"`
+	UserID   int    `json:"user_id,omitempty"`
+	ClientID string `json:"client_id,omitempty"`
+	IsAdmin  bool   `json:"is_admin,omitempty"`
 	jwt.RegisteredClaims
+}
+
+type RefreshTokenData struct {
+	UserID   int    `json:"user_id"`
+	ClientID string `json:"client_id"`
+	IsAdmin  bool   `json:"is_admin,omitempty"`
 }
 
 func HashPassword(password string) (string, error) {
@@ -39,13 +45,7 @@ func ComparePassword(hash string, password string) error {
 }
 
 func AuthenticateUser(ctx context.Context, user model.User, password string) (*model.User, error) {
-	if user.PasswordHash == nil {
-		if password == "" {
-			return &user, nil
-		}
-		return nil, errors.New("invalid password")
-	}
-	if err := ComparePassword(*user.PasswordHash, password); err != nil {
+	if err := ComparePassword(user.PasswordHash, password); err != nil {
 		return nil, errors.New("invalid password")
 	}
 	return &user, nil
@@ -56,7 +56,6 @@ func IssueAccessToken(user model.User, ttl time.Duration) (string, error) {
 	if secret == "" {
 		return "", fmt.Errorf("JWT_SECRET not set")
 	}
-
 	now := time.Now()
 	claims := CustomClaims{
 		UserID:  user.ID,
@@ -67,33 +66,29 @@ func IssueAccessToken(user model.User, ttl time.Duration) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},
 	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
 }
 
 func IssueClientAccessToken(user model.User, client model.OAuthClient, ttl time.Duration) (string, error) {
-	if user.ID != client.OwnerID {
-		return "", fmt.Errorf("user %d is not the owner of client %d", user.ID, client.ID)
-	}
-
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return "", fmt.Errorf("JWT_SECRET not set")
 	}
-
+	if user.ID != client.UserID {
+		return "", fmt.Errorf("user %d is not the owner of client %s", user.ID, client.ClientID)
+	}
 	now := time.Now()
 	claims := CustomClaims{
 		UserID:   user.ID,
-		ClientID: client.ID,
+		ClientID: client.ClientID,
 		IsAdmin:  user.IsAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   fmt.Sprint(client.ID),
+			Subject:   fmt.Sprint(client.ClientID),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},
 	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
 }
@@ -103,7 +98,6 @@ func VerifyAccessToken(tokenString string) (*CustomClaims, error) {
 	if secret == "" {
 		return nil, fmt.Errorf("JWT_SECRET not set")
 	}
-
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -113,22 +107,13 @@ func VerifyAccessToken(tokenString string) (*CustomClaims, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	claims, ok := token.Claims.(*CustomClaims)
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid token")
 	}
-
 	return claims, nil
 }
 
-type RefreshTokenData struct {
-	UserID   int    `json:"user_id"`
-	ClientID string `json:"client_id"`
-	IsAdmin  bool   `json:"is_admin,omitempty"`
-}
-
-// IssueRefreshToken 產生並儲存 refresh token
 func IssueRefreshToken(ctx context.Context, rdb *redis.Client, userID int, clientID string, isAdmin bool, ttl time.Duration) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
