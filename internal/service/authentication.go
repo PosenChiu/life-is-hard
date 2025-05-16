@@ -44,11 +44,11 @@ func ComparePassword(hash string, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
-func AuthenticateUser(ctx context.Context, user model.User, password string) (*model.User, error) {
+func AuthenticateUser(ctx context.Context, user model.User, password string) error {
 	if err := ComparePassword(user.PasswordHash, password); err != nil {
-		return nil, errors.New("invalid password")
+		return errors.New("invalid password")
 	}
-	return &user, nil
+	return nil
 }
 
 func IssueAccessToken(user model.User, ttl time.Duration) (string, error) {

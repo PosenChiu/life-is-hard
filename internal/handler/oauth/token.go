@@ -80,31 +80,29 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 
 		switch req.GrantType {
 		case "password":
-			// 驗證使用者憑證
-			userRec, err := repository.GetUserByName(ctx, db, req.Username)
+			user, err := repository.GetUserByName(ctx, db, req.Username)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid credentials"})
 			}
-			authUser, err := service.AuthenticateUser(ctx, *userRec, req.Password)
-			if err != nil {
+			if err := service.AuthenticateUser(ctx, *user, req.Password); err != nil {
 				return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid credentials"})
 			}
 
 			// 發行 access token
-			tokenStr, err = service.IssueAccessToken(*authUser, 24*time.Hour)
+			tokenStr, err = service.IssueAccessToken(*user, 24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue token"})
 			}
 
 			// 發行 refresh token
-			newRefreshToken, err = service.IssueRefreshToken(ctx, rdb, authUser.ID, oc.ClientID, authUser.IsAdmin, 30*24*time.Hour)
+			newRefreshToken, err = service.IssueRefreshToken(ctx, rdb, user.ID, oc.ClientID, user.IsAdmin, 30*24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to issue refresh token"})
 			}
 
 		case "client_credentials":
 			// 為 client 自身（由 owner）發行 access token
-			owner, err := repository.GetUserByID(ctx, db, oc.OwnerID)
+			owner, err := repository.GetUserByID(ctx, db, oc.UserID)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: "failed to retrieve client owner"})
 			}

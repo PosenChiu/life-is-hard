@@ -30,29 +30,22 @@ import (
 func LoginHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req dto.LoginRequest
-		// 先 Bind
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: fmt.Sprintf("無效的表單資料: %v", err)})
 		}
-		// 再驗證結構化參數 (go-playground/validator)
 		if err := c.Validate(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, dto.HTTPError{Message: err.Error()})
 		}
 
-		// 撈使用者資料
 		user, err := repository.GetUserByName(c.Request().Context(), pool, req.Username)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid credentials"})
 		}
-
-		// 驗證密碼
-		authUser, err := service.AuthenticateUser(c.Request().Context(), *user, req.Password)
-		if err != nil {
+		if err := service.AuthenticateUser(c.Request().Context(), *user, req.Password); err != nil {
 			return c.JSON(http.StatusUnauthorized, dto.HTTPError{Message: "invalid credentials"})
 		}
 
-		// 發行存取令牌
-		token, err := service.IssueAccessToken(*authUser, 24*time.Hour)
+		token, err := service.IssueAccessToken(*user, 24*time.Hour)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, dto.HTTPError{Message: fmt.Sprintf("failed to issue token: %v", err)})
 		}
