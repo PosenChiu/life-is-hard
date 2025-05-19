@@ -114,5 +114,5 @@ func main() {
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	// 啟動服務
-	e.Logger.Fatal(e.Start(":8888"))
+	e.Logger.Fatal(e.Start(":8080"))
 }
