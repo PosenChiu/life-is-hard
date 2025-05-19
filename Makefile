@@ -46,6 +46,12 @@ dev: $(AIR) $(SWAG)
 			&& printf '\nOpen Swagger: \033[36mhttp://localhost:8888/swagger/index.html\033[0m\n\n' \
 		"
 
+.PHONY: test
+test:
+	@go test -coverprofile=coverage.out -coverpkg=./... ./...
+	@go tool cover -html=coverage.out -o coverage.html
+	@go tool cover -func=coverage.out
+
 override rglob = \
   $(wildcard $(foreach p,$(2),$(1)/$(p))) \
   $(foreach d,$(filter-out $(1)/. $(1)/..,$(wildcard $(1)/* $(1)/.*)),$(call rglob,$d,$(2)))

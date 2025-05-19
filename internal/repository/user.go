@@ -5,13 +5,12 @@ import (
 	"context"
 	"fmt"
 
+	"life-is-hard/internal/db"
 	"life-is-hard/internal/model"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func GetUserByID(ctx context.Context, pool *pgxpool.Pool, userID int) (*model.User, error) {
-	row := pool.QueryRow(ctx,
+func GetUserByID(ctx context.Context, q db.Querier, userID int) (*model.User, error) {
+	row := q.QueryRow(ctx,
 		`SELECT id, name, email, password_hash, created_at, is_admin
 		 FROM users WHERE id = $1`,
 		userID,
@@ -30,8 +29,8 @@ func GetUserByID(ctx context.Context, pool *pgxpool.Pool, userID int) (*model.Us
 	return u, nil
 }
 
-func GetUserByName(ctx context.Context, pool *pgxpool.Pool, userName string) (*model.User, error) {
-	row := pool.QueryRow(ctx,
+func GetUserByName(ctx context.Context, q db.Querier, userName string) (*model.User, error) {
+	row := q.QueryRow(ctx,
 		`SELECT id, name, email, password_hash, created_at, is_admin
 		 FROM users WHERE name = $1`,
 		userName,
@@ -50,8 +49,8 @@ func GetUserByName(ctx context.Context, pool *pgxpool.Pool, userName string) (*m
 	return u, nil
 }
 
-func CreateUser(ctx context.Context, pool *pgxpool.Pool, u *model.User) (*model.User, error) {
-	row := pool.QueryRow(ctx,
+func CreateUser(ctx context.Context, q db.Querier, u *model.User) (*model.User, error) {
+	row := q.QueryRow(ctx,
 		`INSERT INTO users (name, email, password_hash, is_admin)
 		 VALUES ($1, $2, $3, $4)
 		 RETURNING id, created_at`,
@@ -66,8 +65,8 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, u *model.User) (*model.
 	return u, nil
 }
 
-func UpdateUser(ctx context.Context, pool *pgxpool.Pool, u *model.User) error {
-	_, err := pool.Exec(ctx,
+func UpdateUser(ctx context.Context, q db.Querier, u *model.User) error {
+	_, err := q.Exec(ctx,
 		`UPDATE users SET name = $1, email = $2, is_admin = $3
 		 WHERE id = $4`,
 		u.Name,
@@ -81,8 +80,8 @@ func UpdateUser(ctx context.Context, pool *pgxpool.Pool, u *model.User) error {
 	return nil
 }
 
-func UpdateUserPassword(ctx context.Context, pool *pgxpool.Pool, userID int, passwordHash string) error {
-	_, err := pool.Exec(ctx,
+func UpdateUserPassword(ctx context.Context, q db.Querier, userID int, passwordHash string) error {
+	_, err := q.Exec(ctx,
 		`UPDATE users
 		 SET password_hash = $1
 		 WHERE id = $2`,
@@ -95,8 +94,8 @@ func UpdateUserPassword(ctx context.Context, pool *pgxpool.Pool, userID int, pas
 	return nil
 }
 
-func DeleteUser(ctx context.Context, pool *pgxpool.Pool, ID int) error {
-	_, err := pool.Exec(ctx,
+func DeleteUser(ctx context.Context, q db.Querier, ID int) error {
+	_, err := q.Exec(ctx,
 		`DELETE FROM users WHERE id = $1`,
 		ID,
 	)

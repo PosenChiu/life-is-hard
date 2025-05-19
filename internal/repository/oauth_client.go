@@ -6,13 +6,12 @@ import (
 	"context"
 	"fmt"
 
+	"life-is-hard/internal/db"
 	"life-is-hard/internal/model"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func GetOAuthClientByClientID(ctx context.Context, pool *pgxpool.Pool, clientID string) (*model.OAuthClient, error) {
-	row := pool.QueryRow(ctx,
+func GetOAuthClientByClientID(ctx context.Context, q db.Querier, clientID string) (*model.OAuthClient, error) {
+	row := q.QueryRow(ctx,
 		`SELECT client_id, client_secret, user_id, grant_types, created_at, updated_at
          FROM oauth_clients
          WHERE client_id = $1`,
@@ -32,8 +31,8 @@ func GetOAuthClientByClientID(ctx context.Context, pool *pgxpool.Pool, clientID 
 	return &c, nil
 }
 
-func CreateOAuthClient(ctx context.Context, pool *pgxpool.Pool, c *model.OAuthClient) error {
-	row := pool.QueryRow(ctx,
+func CreateOAuthClient(ctx context.Context, q db.Querier, c *model.OAuthClient) error {
+	row := q.QueryRow(ctx,
 		`INSERT INTO oauth_clients (client_id, client_secret, user_id, grant_types)
          VALUES ($1, $2, $3, $4)
          RETURNING client_id, created_at, updated_at`,
@@ -52,8 +51,8 @@ func CreateOAuthClient(ctx context.Context, pool *pgxpool.Pool, c *model.OAuthCl
 	return nil
 }
 
-func UpdateOAuthClient(ctx context.Context, pool *pgxpool.Pool, c *model.OAuthClient) error {
-	row := pool.QueryRow(ctx,
+func UpdateOAuthClient(ctx context.Context, q db.Querier, c *model.OAuthClient) error {
+	row := q.QueryRow(ctx,
 		`UPDATE oauth_clients
          SET client_secret = $1, owner_id = $2, grant_types = $3, updated_at = now()
          WHERE client_id = $4
@@ -71,8 +70,8 @@ func UpdateOAuthClient(ctx context.Context, pool *pgxpool.Pool, c *model.OAuthCl
 	return nil
 }
 
-func DeleteOAuthClient(ctx context.Context, pool *pgxpool.Pool, clientID string) error {
-	_, err := pool.Exec(ctx,
+func DeleteOAuthClient(ctx context.Context, q db.Querier, clientID string) error {
+	_, err := q.Exec(ctx,
 		`DELETE FROM oauth_clients WHERE client_id = $1`,
 		clientID,
 	)
@@ -82,8 +81,8 @@ func DeleteOAuthClient(ctx context.Context, pool *pgxpool.Pool, clientID string)
 	return nil
 }
 
-func ListOAuthClients(ctx context.Context, pool *pgxpool.Pool, userID int) ([]model.OAuthClient, error) {
-	rows, err := pool.Query(ctx,
+func ListOAuthClients(ctx context.Context, q db.Querier, userID int) ([]model.OAuthClient, error) {
+	rows, err := q.Query(ctx,
 		`SELECT client_id, client_secret, owner_id, grant_types, created_at, updated_at
          FROM oauth_clients
 		 WHERE user_id = $1`,
