@@ -76,8 +76,5 @@ prompt: $(PROMPT_FILES) $(sort $(foreach dir,$(PROMPT_DIRS),$(call rglob,$(dir),
 	@printf '# Created by Makefile automatically.\n.gitignore\n' > $@/.gitignore
 	@printf 'CODE.md\n' >> $@/.gitignore
 	@printf '# Aggregated Code\n\n' > $@/CODE.md
-	@$(foreach f,$^,$(call FORMAT_FILE_TO_MD,$f,$@/code.md);)
-	@printf 'LAYOUT.md\n' >> $@/.gitignore
-	@printf '# Directory Layout\n\n' > $@/LAYOUT.md
-	@$(foreach f,$^,printf '%s %s\n' "##" "$f" >> $@/LAYOUT.md;)
-	@printf 'Prompt: \033[36mRead the README.md LAYOUT.md CODE.md I provided before typing my question.\033[0m\n'
+	@$(foreach f,$^,$(call FORMAT_FILE_TO_MD,$f,$@/CODE.md);)
+	@printf 'Prompt: \033[36mRead the README.md CODE.md I provided before typing my question.\033[0m\n'
