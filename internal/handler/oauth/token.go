@@ -9,8 +9,8 @@ import (
 
 	"life-is-hard/internal/api"
 	"life-is-hard/internal/model"
-	"life-is-hard/internal/repository"
 	"life-is-hard/internal/service"
+	"life-is-hard/internal/store"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -59,7 +59,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 		req.ClientSecret = parts[1]
 
 		// 驗證 client
-		oc, err := repository.GetOAuthClientByClientID(ctx, db, req.ClientID)
+		oc, err := store.GetOAuthClientByClientID(ctx, db, req.ClientID)
 		if err != nil || oc.ClientSecret != req.ClientSecret {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid client credentials"})
 		}
@@ -80,7 +80,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 
 		switch req.GrantType {
 		case "password":
-			user, err := repository.GetUserByName(ctx, db, req.Username)
+			user, err := store.GetUserByName(ctx, db, req.Username)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid credentials"})
 			}
@@ -102,7 +102,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 
 		case "client_credentials":
 			// 為 client 自身（由 owner）發行 access token
-			owner, err := repository.GetUserByID(ctx, db, oc.UserID)
+			owner, err := store.GetUserByID(ctx, db, oc.UserID)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to retrieve client owner"})
 			}

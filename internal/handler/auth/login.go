@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"life-is-hard/internal/api"
-	"life-is-hard/internal/repository"
 	"life-is-hard/internal/service"
+	"life-is-hard/internal/store"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -37,7 +37,7 @@ func LoginHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: err.Error()})
 		}
 
-		user, err := repository.GetUserByName(c.Request().Context(), pool, req.Username)
+		user, err := store.GetUserByName(c.Request().Context(), pool, req.Username)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid credentials"})
 		}

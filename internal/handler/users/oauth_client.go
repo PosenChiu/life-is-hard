@@ -9,8 +9,8 @@ import (
 	"life-is-hard/internal/api"
 	"life-is-hard/internal/middleware"
 	"life-is-hard/internal/model"
-	"life-is-hard/internal/repository"
 	"life-is-hard/internal/service"
+	"life-is-hard/internal/store"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -51,7 +51,7 @@ func CreateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			UserID:       claims.UserID,
 			GrantTypes:   req.GrantTypes,
 		}
-		if err := repository.CreateOAuthClient(c.Request().Context(), db, client); err != nil {
+		if err := store.CreateOAuthClient(c.Request().Context(), db, client); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 		return c.JSON(http.StatusCreated, api.OAuthClientResponse{
@@ -84,7 +84,7 @@ func ListMyOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
 
-		clients, err := repository.ListOAuthClients(c.Request().Context(), db, claims.UserID)
+		clients, err := store.ListOAuthClients(c.Request().Context(), db, claims.UserID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
@@ -126,7 +126,7 @@ func GetMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
 
-		client, err := repository.GetOAuthClientByClientID(c.Request().Context(), db, c.Param("client_id"))
+		client, err := store.GetOAuthClientByClientID(c.Request().Context(), db, c.Param("client_id"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
@@ -176,7 +176,7 @@ func UpdateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: err.Error()})
 		}
 
-		client, err := repository.GetOAuthClientByClientID(c.Request().Context(), db, c.Param("client_id"))
+		client, err := store.GetOAuthClientByClientID(c.Request().Context(), db, c.Param("client_id"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
@@ -188,7 +188,7 @@ func UpdateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 		client.GrantTypes = req.GrantTypes
 		client.UpdatedAt = time.Now().UTC()
 
-		if err := repository.UpdateOAuthClient(c.Request().Context(), db, client); err != nil {
+		if err := store.UpdateOAuthClient(c.Request().Context(), db, client); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 
@@ -225,7 +225,7 @@ func DeleteMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
 
-		client, err := repository.GetOAuthClientByClientID(c.Request().Context(), db, c.Param("client_id"))
+		client, err := store.GetOAuthClientByClientID(c.Request().Context(), db, c.Param("client_id"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
@@ -233,7 +233,7 @@ func DeleteMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusNotFound, api.ErrorResponse{Message: "client not found"})
 		}
 
-		if err := repository.DeleteOAuthClient(c.Request().Context(), db, c.Param("client_id")); err != nil {
+		if err := store.DeleteOAuthClient(c.Request().Context(), db, c.Param("client_id")); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)

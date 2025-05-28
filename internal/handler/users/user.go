@@ -10,8 +10,8 @@ import (
 	"life-is-hard/internal/api"
 	"life-is-hard/internal/middleware"
 	"life-is-hard/internal/model"
-	"life-is-hard/internal/repository"
 	"life-is-hard/internal/service"
+	"life-is-hard/internal/store"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -54,7 +54,7 @@ func CreateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid email format"})
 		}
 
-		user, err := repository.CreateUser(c.Request().Context(), pool, &model.User{
+		user, err := store.CreateUser(c.Request().Context(), pool, &model.User{
 			Name:         req.Name,
 			Email:        req.Email,
 			PasswordHash: hash,
@@ -94,7 +94,7 @@ func GetUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid user ID"})
 		}
-		user, err := repository.GetUserByID(c.Request().Context(), pool, id)
+		user, err := store.GetUserByID(c.Request().Context(), pool, id)
 		if err != nil {
 			return c.JSON(http.StatusNotFound, api.ErrorResponse{Message: "user not found"})
 		}
@@ -146,7 +146,7 @@ func UpdateUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid email format"})
 		}
 
-		if err := repository.UpdateUser(c.Request().Context(), pool, &model.User{
+		if err := store.UpdateUser(c.Request().Context(), pool, &model.User{
 			ID:    id,
 			Name:  req.Name,
 			Email: req.Email,
@@ -176,7 +176,7 @@ func DeleteUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid user ID"})
 		}
-		if err := repository.DeleteUser(c.Request().Context(), pool, id); err != nil {
+		if err := store.DeleteUser(c.Request().Context(), pool, id); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)
@@ -201,7 +201,7 @@ func GetMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 		if !ok || claims.UserID == 0 {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
-		user, err := repository.GetUserByID(c.Request().Context(), pool, claims.UserID)
+		user, err := store.GetUserByID(c.Request().Context(), pool, claims.UserID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
@@ -251,7 +251,7 @@ func UpdateMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid email format"})
 		}
 
-		err := repository.UpdateUser(c.Request().Context(), pool, &model.User{
+		err := store.UpdateUser(c.Request().Context(), pool, &model.User{
 			ID:    claims.UserID,
 			Name:  req.Name,
 			Email: req.Email,
@@ -295,7 +295,7 @@ func UpdateMyUserPasswordHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
 
-		user, err := repository.GetUserByID(c.Request().Context(), pool, claims.UserID)
+		user, err := store.GetUserByID(c.Request().Context(), pool, claims.UserID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
@@ -309,7 +309,7 @@ func UpdateMyUserPasswordHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to hash new password"})
 		}
 
-		if err := repository.UpdateUserPassword(c.Request().Context(), pool, claims.UserID, hash); err != nil {
+		if err := store.UpdateUserPassword(c.Request().Context(), pool, claims.UserID, hash); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 
@@ -335,7 +335,7 @@ func DeleteMyUserHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 		if !ok || claims.UserID == 0 {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
-		if err := repository.DeleteUser(c.Request().Context(), pool, claims.UserID); err != nil {
+		if err := store.DeleteUser(c.Request().Context(), pool, claims.UserID); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)

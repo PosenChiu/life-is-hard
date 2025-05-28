@@ -1,5 +1,5 @@
-// File: internal/repository/user_test.go
-package repository
+// File: internal/store/user_test.go
+package store
 
 import (
 	"context"

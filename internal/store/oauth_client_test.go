@@ -1,5 +1,5 @@
-// File: internal/repository/oauth_client_test.go
-package repository
+// File: internal/store/oauth_client_test.go
+package store
 
 import (
 	"context"
