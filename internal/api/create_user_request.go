@@ -1,7 +1,7 @@
-// File: internal/dto/create_user_request.go
-package dto
+// File: internal/api/create_user_request.go
+package api
 
-// swagger:model dto.CreateUserRequest
+// swagger:model api.CreateUserRequest
 type CreateUserRequest struct {
 	Name     string `form:"name" validate:"required" example:"Alice"`
 	Email    string `form:"email" validate:"required,email" example:"alice@example.com"`

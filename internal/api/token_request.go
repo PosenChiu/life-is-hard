@@ -1,7 +1,7 @@
-// File: internal/dto/token_request.go
-package dto
+// File: internal/api/token_request.go
+package api
 
-// swagger:model dto.TokenRequest
+// swagger:model api.TokenRequest
 type TokenRequest struct {
 	GrantType    string `form:"grant_type" validate:"required" example:"password"`
 	Username     string `form:"username" example:"user@example.com"`

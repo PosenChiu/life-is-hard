@@ -1,7 +1,7 @@
-// File: internal/dto/token_response.go
-package dto
+// File: internal/api/token_response.go
+package api
 
-// swagger:model dto.TokenResponse
+// swagger:model api.TokenResponse
 type TokenResponse struct {
 	AccessToken  string `json:"access_token" example:"..."`
 	TokenType    string `json:"token_type" example:"Bearer"`

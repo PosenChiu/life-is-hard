@@ -1,7 +1,7 @@
-// File: internal/dto/login_request.go
-package dto
+// File: internal/api/login_request.go
+package api
 
-// swagger:model dto.LoginRequest
+// swagger:model api.LoginRequest
 type LoginRequest struct {
 	Username string `form:"username" validate:"required" example:"alice"`
 	Password string `form:"password" validate:"required" example:"Secret123!"`

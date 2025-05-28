@@ -1,7 +1,7 @@
-// File: internal/dto/create_o_auth_client_request.go
-package dto
+// File: internal/api/create_o_auth_client_request.go
+package api
 
-// swagger:model dto.CreateOAuthClientRequest
+// swagger:model api.CreateOAuthClientRequest
 type CreateOAuthClientRequest struct {
 	ClientID     string   `json:"client_id" validate:"required" example:"my-client"`
 	ClientSecret string   `json:"client_secret" validate:"required" example:"secret"`

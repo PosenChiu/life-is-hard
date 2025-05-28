@@ -1,9 +1,9 @@
-// File: internal/dto/user_response.go
-package dto
+// File: internal/api/user_response.go
+package api
 
 import "time"
 
-// swagger:model dto.UserResponse
+// swagger:model api.UserResponse
 type UserResponse struct {
 	ID        int       `json:"id" example:"1"`
 	Name      string    `json:"name" example:"Alice"`

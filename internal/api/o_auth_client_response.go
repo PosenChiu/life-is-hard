@@ -1,9 +1,9 @@
-// File: internal/dto/o_auth_client_response.go
-package dto
+// File: internal/api/o_auth_client_response.go
+package api
 
 import "time"
 
-// swagger:model dto.OAuthClientResponse
+// swagger:model api.OAuthClientResponse
 type OAuthClientResponse struct {
 	ClientID     string    `json:"client_id" example:"my-client"`
 	ClientSecret string    `json:"client_secret" example:"secret"`

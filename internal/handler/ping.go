@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"life-is-hard/internal/dto"
+	"life-is-hard/internal/api"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -18,8 +18,8 @@ import (
 // @Tags        ping
 // @Accept      json
 // @Produce     json
-// @Success     200 {object} dto.PingResponse
-// @Failure     500 {object} dto.ErrorResponse
+// @Success     200 {object} api.PingResponse
+// @Failure     500 {object} api.ErrorResponse
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
@@ -29,14 +29,14 @@ func PingHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 		ctx := c.Request().Context()
 
 		if err := db.Ping(ctx); err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "database unhealthy"})
+			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "database unhealthy"})
 		}
 
 		err := rdb.Set(ctx, "ping:timestamp", time.Now().Format(time.RFC3339), time.Minute).Err()
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Message: "redis unhealthy"})
+			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "redis unhealthy"})
 		}
 
-		return c.JSON(http.StatusOK, dto.PingResponse{Message: "pong"})
+		return c.JSON(http.StatusOK, api.PingResponse{Message: "pong"})
 	}
 }

@@ -1,7 +1,7 @@
-// File: internal/dto/update_o_auth_client_request.go
-package dto
+// File: internal/api/update_o_auth_client_request.go
+package api
 
-// swagger:model dto.UpdateOAuthClientRequest
+// swagger:model api.UpdateOAuthClientRequest
 type UpdateOAuthClientRequest struct {
 	ClientSecret string   `json:"client_secret" validate:"required" example:"new-secret"`
 	GrantTypes   []string `json:"grant_types" validate:"required" example:"password,client_credentials,refresh_token"`
