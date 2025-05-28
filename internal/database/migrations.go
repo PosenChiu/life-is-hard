@@ -1,5 +1,5 @@
-// File: internal/db/migrations.go
-package db
+// File: internal/database/migrations.go
+package database
 
 import (
 	"database/sql"

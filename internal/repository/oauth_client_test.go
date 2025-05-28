@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"life-is-hard/internal/db"
+	"life-is-hard/internal/database"
 	"life-is-hard/internal/model"
 
 	"github.com/jackc/pgx/v5"
@@ -97,7 +97,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	/* GetOAuthClientByClientID */
 	t.Run("Get ok", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{client: &sample}
 			},
@@ -108,7 +108,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("Get err", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{scanErr: errors.New("not found")}
 			},
@@ -119,7 +119,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	/* CreateOAuthClient */
 	t.Run("Create ok", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{client: &sample}
 			},
@@ -128,7 +128,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("Create err", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{scanErr: errors.New("dup")}
 			},
@@ -138,7 +138,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	/* UpdateOAuthClient */
 	t.Run("Update ok", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, nil
 			},
@@ -151,7 +151,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("Update err", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{scanErr: errors.New("fail update")}
 			},
@@ -161,7 +161,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	/* DeleteOAuthClient */
 	t.Run("Delete ok", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, nil
 			},
@@ -170,7 +170,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("Delete err", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, errors.New("fail delete")
 			},
@@ -181,7 +181,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	/* ListOAuthClients */
 	t.Run("List ok", func(t *testing.T) {
 		rows := &fakeRows{data: []model.OAuthClient{sample, sample}}
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
 				return rows, nil
 			},
@@ -192,9 +192,9 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("List query err", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
-				return nil, errors.New("db fail")
+				return nil, errors.New("database fail")
 			},
 		}
 		_, err := ListOAuthClients(context.Background(), p, 1)
@@ -203,7 +203,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	t.Run("List scan err", func(t *testing.T) {
 		rows := &fakeRows{data: []model.OAuthClient{sample}, scanErr: errors.New("scan fail")}
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
 				return rows, nil
 			},

@@ -19,13 +19,13 @@ import (
 	"os"
 	"strconv"
 
-	"life-is-hard/internal/db"
+	"life-is-hard/internal/cache"
+	"life-is-hard/internal/database"
 	"life-is-hard/internal/router"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/redis/go-redis/v9"
 
 	_ "life-is-hard/docs" // 引入 swag 產出的 docs
 
@@ -71,34 +71,26 @@ func main() {
 	}
 
 	// 回滾並執行遷移
-	// if err := db.RollbackAll(dbURL); err != nil {
+	// if err := database.RollbackAll(dbURL); err != nil {
 	// 	log.Fatalf("RollbackAll 失敗: %v", err)
 	// }
-	if err := db.RunMigrations(dbURL); err != nil {
+	if err := database.RunMigrations(dbURL); err != nil {
 		log.Fatalf("Migration 執行失敗: %v", err)
 	}
 
 	// 建立資料庫連線池
-	pool, err := db.NewPool(context.Background(), dbURL)
+	pool, err := database.NewPool(context.Background(), dbURL)
 	if err != nil {
 		log.Fatalf("DB 連線失敗: %v", err)
 	}
 	defer pool.Close()
 
 	// 建立 Redis 客戶端
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: redisPassword,
-		DB:       rdbIndex,
-	})
-	if err := rdb.Ping(context.Background()).Err(); err != nil {
+	rdb, err := cache.NewRedisClient(redisAddr, redisPassword, rdbIndex)
+	if err != nil {
 		log.Fatalf("Redis 連線失敗: %v", err)
 	}
-	defer func() {
-		if err := rdb.Close(); err != nil {
-			log.Printf("關閉 Redis 連線失敗: %v", err)
-		}
-	}()
+	defer cache.CloseRedisClient(rdb)
 
 	// Echo 實例及中介層
 	e := echo.New()
@@ -107,7 +99,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	// 註冊路由並注入 db 與 rdb
+	// 註冊路由並注入 database 與 rdb
 	router.Setup(e, pool, rdb)
 
 	// Swagger UI

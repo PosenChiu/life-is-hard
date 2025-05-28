@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"life-is-hard/internal/db"
+	"life-is-hard/internal/database"
 	"life-is-hard/internal/model"
 
 	"github.com/jackc/pgx/v5"
@@ -62,7 +62,7 @@ func TestUserRepository(t *testing.T) {
 
 	/* --- GetUserByID --- */
 	t.Run("GetUserByID success", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeUserRow{user: sample}
 			},
@@ -74,7 +74,7 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("GetUserByID not found", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeUserRow{scanErr: errors.New("no rows")}
 			},
@@ -86,7 +86,7 @@ func TestUserRepository(t *testing.T) {
 
 	/* --- GetUserByName --- */
 	t.Run("GetUserByName success", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeUserRow{user: sample}
 			},
@@ -97,7 +97,7 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("GetUserByName not found", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeUserRow{scanErr: errors.New("no rows")}
 			},
@@ -110,7 +110,7 @@ func TestUserRepository(t *testing.T) {
 	/* --- CreateUser --- */
 	t.Run("CreateUser success", func(t *testing.T) {
 		newUser := &model.User{Name: "Bob", Email: "bob@example.com", PasswordHash: "pwdhash", IsAdmin: false}
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				u := *newUser
 				u.ID = 42
@@ -125,7 +125,7 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("CreateUser error", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeUserRow{scanErr: errors.New("dup key")}
 			},
@@ -136,7 +136,7 @@ func TestUserRepository(t *testing.T) {
 
 	/* --- UpdateUser --- */
 	t.Run("UpdateUser success", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, nil
 			},
@@ -146,7 +146,7 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("UpdateUser error", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, errors.New("update failed")
 			},
@@ -157,7 +157,7 @@ func TestUserRepository(t *testing.T) {
 
 	/* --- UpdateUserPassword --- */
 	t.Run("UpdateUserPassword success", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, nil
 			},
@@ -167,7 +167,7 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("UpdateUserPassword error", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, errors.New("pwd update failed")
 			},
@@ -178,7 +178,7 @@ func TestUserRepository(t *testing.T) {
 
 	/* --- DeleteUser --- */
 	t.Run("DeleteUser success", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, nil
 			},
@@ -188,7 +188,7 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("DeleteUser error", func(t *testing.T) {
-		p := &db.FakePool{
+		p := &database.FakePool{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, errors.New("delete failed")
 			},

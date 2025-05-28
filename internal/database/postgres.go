@@ -1,5 +1,5 @@
-// File: internal/db/db.go
-package db
+// File: internal/database/postgres.go
+package database
 
 import (
 	"context"
