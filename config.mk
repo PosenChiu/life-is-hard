@@ -4,7 +4,7 @@ DB_SCHEME ?= postgres
 DB_USERNAME ?= postgres
 DB_PASSWORD ?= password
 DB_HOST ?= localhost
-DB_PORT ?= 55432
+DB_PORT ?= 5433
 DB_NAME ?= postgres
 DATABASE_URL ?= $(DB_SCHEME)://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)
 
