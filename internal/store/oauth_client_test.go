@@ -210,4 +210,33 @@ func TestOAuthClientRepository(t *testing.T) {
 		_, err := ListOAuthClients(context.Background(), p, 1)
 		require.Error(t, err)
 	})
+
+	/* ListOAuthClients – 空清單 */
+	t.Run("List empty", func(t *testing.T) {
+		p := &database.FakeDB{
+			QueryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
+				// 沒有任何資料
+				return &fakeRows{data: []model.OAuthClient{}}, nil
+			},
+		}
+		list, err := ListOAuthClients(context.Background(), p, 1)
+		require.NoError(t, err)
+		require.Empty(t, list)
+	})
+
+	/* ListOAuthClients – rows.Err() 回傳錯誤 */
+	t.Run("List rows err", func(t *testing.T) {
+		p := &database.FakeDB{
+			QueryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
+				// Next() 直接跳過 loop，但 Err() 帶回錯誤
+				return &fakeRows{
+					data: []model.OAuthClient{},
+					err:  errors.New("rows failure"),
+				}, nil
+			},
+		}
+		_, err := ListOAuthClients(context.Background(), p, 1)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "rows error")
+	})
 }
