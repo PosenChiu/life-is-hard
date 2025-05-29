@@ -1,4 +1,3 @@
-// File: internal/handler/ping.go
 package handler
 
 import (
@@ -6,13 +5,12 @@ import (
 	"time"
 
 	"life-is-hard/internal/api"
+	"life-is-hard/internal/cache"
+	"life-is-hard/internal/database"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
-	"github.com/redis/go-redis/v9"
 )
 
-// PingHandler 健康檢查（需通過認證），並於 Redis 設定示例鍵值
 // @Summary     Health Check
 // @Description 回傳 pong，並檢查資料庫連線是否正常，同時在 Redis 設置一個示例鍵值
 // @Tags        ping
@@ -24,7 +22,7 @@ import (
 // @Security    OAuth2Application
 // @Security    OAuth2Password
 // @Router      /ping [get]
-func PingHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
+func PingHandler(db database.DB, cache cache.Cache) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
@@ -32,9 +30,8 @@ func PingHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "database unhealthy"})
 		}
 
-		err := rdb.Set(ctx, "ping:timestamp", time.Now().Format(time.RFC3339), time.Minute).Err()
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "redis unhealthy"})
+		if err := cache.Set(ctx, "ping:timestamp", time.Now().Format(time.RFC3339), time.Minute).Err(); err != nil {
+			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "cache unhealthy"})
 		}
 
 		return c.JSON(http.StatusOK, api.PingResponse{Message: "pong"})

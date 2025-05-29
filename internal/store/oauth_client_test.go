@@ -1,4 +1,3 @@
-// File: internal/store/oauth_client_test.go
 package store
 
 import (
@@ -97,7 +96,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	/* GetOAuthClientByClientID */
 	t.Run("Get ok", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{client: &sample}
 			},
@@ -108,7 +107,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("Get err", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{scanErr: errors.New("not found")}
 			},
@@ -119,7 +118,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	/* CreateOAuthClient */
 	t.Run("Create ok", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{client: &sample}
 			},
@@ -128,7 +127,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("Create err", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{scanErr: errors.New("dup")}
 			},
@@ -138,7 +137,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	/* UpdateOAuthClient */
 	t.Run("Update ok", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, nil
 			},
@@ -151,7 +150,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("Update err", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			QueryRowFn: func(_ context.Context, _ string, _ ...any) pgx.Row {
 				return &fakeRow{scanErr: errors.New("fail update")}
 			},
@@ -161,7 +160,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	/* DeleteOAuthClient */
 	t.Run("Delete ok", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, nil
 			},
@@ -170,7 +169,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("Delete err", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			ExecFn: func(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
 				return pgconn.CommandTag{}, errors.New("fail delete")
 			},
@@ -181,7 +180,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	/* ListOAuthClients */
 	t.Run("List ok", func(t *testing.T) {
 		rows := &fakeRows{data: []model.OAuthClient{sample, sample}}
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			QueryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
 				return rows, nil
 			},
@@ -192,7 +191,7 @@ func TestOAuthClientRepository(t *testing.T) {
 	})
 
 	t.Run("List query err", func(t *testing.T) {
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			QueryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
 				return nil, errors.New("database fail")
 			},
@@ -203,7 +202,7 @@ func TestOAuthClientRepository(t *testing.T) {
 
 	t.Run("List scan err", func(t *testing.T) {
 		rows := &fakeRows{data: []model.OAuthClient{sample}, scanErr: errors.New("scan fail")}
-		p := &database.FakePool{
+		p := &database.FakeDB{
 			QueryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) {
 				return rows, nil
 			},

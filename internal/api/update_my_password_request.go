@@ -1,4 +1,3 @@
-// File: internal/api/update_my_password_request.go
 package api
 
 // swagger:model api.UpdateMyPasswordRequest

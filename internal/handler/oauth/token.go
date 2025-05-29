@@ -1,4 +1,3 @@
-// File: internal/handler/oauth/token.go
 package oauth
 
 import (
@@ -8,16 +7,15 @@ import (
 	"time"
 
 	"life-is-hard/internal/api"
+	"life-is-hard/internal/cache"
+	"life-is-hard/internal/database"
 	"life-is-hard/internal/model"
 	"life-is-hard/internal/service"
 	"life-is-hard/internal/store"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
-	"github.com/redis/go-redis/v9"
 )
 
-// TokenHandler handles the OAuth2 token endpoint (POST /api/oauth/token).
 // @Summary     OAuth2 obtain access token
 // @Description Issue a JWT access token (and refresh token if applicable) using OAuth2 grant_type
 // @Tags        oauth
@@ -33,7 +31,7 @@ import (
 // @Failure     401 {object} api.ErrorResponse
 // @Failure     500 {object} api.ErrorResponse
 // @Router      /oauth/token [post]
-func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
+func TokenHandler(db database.DB, cache cache.Cache) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 		var req api.TokenRequest
@@ -95,7 +93,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 			}
 
 			// 發行 refresh token
-			newRefreshToken, err = service.IssueRefreshToken(ctx, rdb, user.ID, oc.ClientID, user.IsAdmin, 30*24*time.Hour)
+			newRefreshToken, err = service.IssueRefreshToken(ctx, cache, user.ID, oc.ClientID, user.IsAdmin, 30*24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to issue refresh token"})
 			}
@@ -114,7 +112,7 @@ func TokenHandler(db *pgxpool.Pool, rdb *redis.Client) echo.HandlerFunc {
 
 		case "refresh_token":
 			// 驗證並讀取 refresh token
-			data, err := service.ValidateRefreshToken(ctx, rdb, req.RefreshToken)
+			data, err := service.ValidateRefreshToken(ctx, cache, req.RefreshToken)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid refresh token"})
 			}

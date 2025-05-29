@@ -1,5 +1,3 @@
-// File: internal/store/oauth_client.go
-
 package store
 
 import (
@@ -10,8 +8,8 @@ import (
 	"life-is-hard/internal/model"
 )
 
-func GetOAuthClientByClientID(ctx context.Context, q database.Querier, clientID string) (*model.OAuthClient, error) {
-	row := q.QueryRow(ctx,
+func GetOAuthClientByClientID(ctx context.Context, db database.DB, clientID string) (*model.OAuthClient, error) {
+	row := db.QueryRow(ctx,
 		`SELECT client_id, client_secret, user_id, grant_types, created_at, updated_at
          FROM oauth_clients
          WHERE client_id = $1`,
@@ -31,8 +29,8 @@ func GetOAuthClientByClientID(ctx context.Context, q database.Querier, clientID 
 	return &c, nil
 }
 
-func CreateOAuthClient(ctx context.Context, q database.Querier, c *model.OAuthClient) error {
-	row := q.QueryRow(ctx,
+func CreateOAuthClient(ctx context.Context, db database.DB, c *model.OAuthClient) error {
+	row := db.QueryRow(ctx,
 		`INSERT INTO oauth_clients (client_id, client_secret, user_id, grant_types)
          VALUES ($1, $2, $3, $4)
          RETURNING client_id, created_at, updated_at`,
@@ -51,8 +49,8 @@ func CreateOAuthClient(ctx context.Context, q database.Querier, c *model.OAuthCl
 	return nil
 }
 
-func UpdateOAuthClient(ctx context.Context, q database.Querier, c *model.OAuthClient) error {
-	row := q.QueryRow(ctx,
+func UpdateOAuthClient(ctx context.Context, db database.DB, c *model.OAuthClient) error {
+	row := db.QueryRow(ctx,
 		`UPDATE oauth_clients
          SET client_secret = $1, owner_id = $2, grant_types = $3, updated_at = now()
          WHERE client_id = $4
@@ -70,8 +68,8 @@ func UpdateOAuthClient(ctx context.Context, q database.Querier, c *model.OAuthCl
 	return nil
 }
 
-func DeleteOAuthClient(ctx context.Context, q database.Querier, clientID string) error {
-	_, err := q.Exec(ctx,
+func DeleteOAuthClient(ctx context.Context, db database.DB, clientID string) error {
+	_, err := db.Exec(ctx,
 		`DELETE FROM oauth_clients WHERE client_id = $1`,
 		clientID,
 	)
@@ -81,8 +79,8 @@ func DeleteOAuthClient(ctx context.Context, q database.Querier, clientID string)
 	return nil
 }
 
-func ListOAuthClients(ctx context.Context, q database.Querier, userID int) ([]model.OAuthClient, error) {
-	rows, err := q.Query(ctx,
+func ListOAuthClients(ctx context.Context, db database.DB, userID int) ([]model.OAuthClient, error) {
+	rows, err := db.Query(ctx,
 		`SELECT client_id, client_secret, owner_id, grant_types, created_at, updated_at
          FROM oauth_clients
 		 WHERE user_id = $1`,

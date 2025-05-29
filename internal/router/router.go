@@ -1,11 +1,10 @@
-// File: internal/router/router.go
 package router
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
-	"github.com/redis/go-redis/v9"
 
+	"life-is-hard/internal/cache"
+	"life-is-hard/internal/database"
 	"life-is-hard/internal/handler"
 	"life-is-hard/internal/handler/auth"
 	"life-is-hard/internal/handler/oauth"
@@ -14,34 +13,31 @@ import (
 )
 
 // Setup 註冊所有路由與中介層
-func Setup(e *echo.Echo, db *pgxpool.Pool, rdb *redis.Client) {
+func Setup(e *echo.Echo, db database.DB, cache cache.Cache) {
 	api := e.Group("/api")
 
 	// 健康檢查（需登入）
-	api.GET("/ping", handler.PingHandler(db, rdb), middleware.RequireAuth)
+	api.GET("/ping", handler.PingHandler(db, cache), middleware.RequireAuth)
 
 	// 使用者登入
 	api.POST("/auth/login", auth.LoginHandler(db))
-	api.POST("/oauth/token", oauth.TokenHandler(db, rdb))
+	api.POST("/oauth/token", oauth.TokenHandler(db, cache))
 
 	// 管理員專屬 Users CRUD
-	apiUsers := api.Group("/users", middleware.RequireAdmin)
-	apiUsers.POST("", users.CreateUserHandler(db))
-	apiUsers.GET("/:id", users.GetUserHandler(db))
-	apiUsers.PUT("/:id", users.UpdateUserHandler(db))
-	apiUsers.DELETE("/:id", users.DeleteUserHandler(db))
+	api.POST("/users", users.CreateUserHandler(db), middleware.RequireAdmin)
+	api.GET("/users/:id", users.GetUserHandler(db), middleware.RequireAdmin)
+	api.PUT("/users/:id", users.UpdateUserHandler(db), middleware.RequireAdmin)
+	api.DELETE("/users/:id", users.DeleteUserHandler(db), middleware.RequireAdmin)
 
 	// 取得、更新、刪除當前使用者個人資料
-	apiUsersMe := api.Group("/users/me", middleware.RequireAuth)
-	apiUsersMe.GET("", users.GetMyUserHandler(db))
-	apiUsersMe.PUT("", users.UpdateMyUserHandler(db))
-	apiUsersMe.DELETE("", users.DeleteMyUserHandler(db))
-	apiUsersMe.PATCH("/password", users.UpdateMyUserPasswordHandler(db))
+	api.GET("/users/me", users.GetMyUserHandler(db), middleware.RequireAuth)
+	api.PUT("/users/me", users.UpdateMyUserHandler(db), middleware.RequireAuth)
+	api.DELETE("/users/me", users.DeleteMyUserHandler(db), middleware.RequireAuth)
+	api.PATCH("/users/me/password", users.UpdateMyUserPasswordHandler(db), middleware.RequireAuth)
 
-	apiUsersMeClients := apiUsersMe.Group("/oauth/clients", middleware.RequireAuth)
-	apiUsersMeClients.POST("", users.CreateMyOAuthClientHandler(db))
-	apiUsersMeClients.GET("", users.ListMyOAuthClientsHandler(db))
-	apiUsersMeClients.GET("/:client_id", users.GetMyOAuthClientHandler(db))
-	apiUsersMeClients.PUT("/:client_id", users.UpdateMyOAuthClientHandler(db))
-	apiUsersMeClients.DELETE("/:client_id", users.DeleteMyOAuthClientHandler(db))
+	api.POST("/users/me/oauth-clients", users.CreateMyOAuthClientHandler(db), middleware.RequireAuth)
+	api.GET("/users/me/oauth-clients", users.ListMyOAuthClientsHandler(db), middleware.RequireAuth)
+	api.GET("/users/me/oauth-clients/:client_id", users.GetMyOAuthClientHandler(db), middleware.RequireAuth)
+	api.PUT("/users/me/oauth-clients/:client_id", users.UpdateMyOAuthClientHandler(db), middleware.RequireAuth)
+	api.DELETE("/users/me/oauth-clients/:client_id", users.DeleteMyOAuthClientHandler(db), middleware.RequireAuth)
 }

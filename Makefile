@@ -35,13 +35,14 @@ run: kill
 .PHONY: dev
 dev: $(AIR) $(SWAG)
 	@$(AIR) \
+		-build.bin "./tmp/main" \
 		-build.exclude_dir "docs,prompt,tmp" \
 		-build.cmd "\
-			$(SWAG) init -g main.go -d cmd/service,internal/api,internal/handler \
+			$(SWAG) init -g service.go -d cmd/service,internal/api,internal/handler \
 			&& go mod tidy \
 			&& go fmt ./... \
 			&& go vet ./... \
-			&& go build -o ./tmp/main cmd/service/main.go \
+			&& go build -o ./tmp/main cmd/service/service.go \
 			&& printf '# Created by Makefile automatically.\n*\n' | tee {docs,tmp}/.gitignore >/dev/null \
 			&& printf '\nOpen Swagger: \033[36mhttp://localhost:8080/swagger/index.html\033[0m\n\n' \
 		"

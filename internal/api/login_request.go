@@ -1,4 +1,3 @@
-// File: internal/api/login_request.go
 package api
 
 // swagger:model api.LoginRequest

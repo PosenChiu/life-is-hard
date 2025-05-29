@@ -1,4 +1,3 @@
-// File: internal/api/o_auth_client_response.go
 package api
 
 import "time"

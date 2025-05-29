@@ -1,4 +1,3 @@
-// File: internal/api/token_request.go
 package api
 
 // swagger:model api.TokenRequest

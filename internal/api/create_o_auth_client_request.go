@@ -1,4 +1,3 @@
-// File: internal/api/create_o_auth_client_request.go
 package api
 
 // swagger:model api.CreateOAuthClientRequest

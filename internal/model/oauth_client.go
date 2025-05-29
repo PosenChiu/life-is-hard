@@ -1,9 +1,7 @@
-// File: internal/model/oauth_client.go
 package model
 
 import "time"
 
-// OAuthClient 對應 oauth_clients 資料表
 type OAuthClient struct {
 	ClientID     string    `db:"client_id" json:"client_id"`
 	ClientSecret string    `db:"client_secret" json:"client_secret"`

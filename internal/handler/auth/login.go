@@ -1,4 +1,3 @@
-// File: internal/handler/auth/login.go
 package auth
 
 import (
@@ -7,14 +6,13 @@ import (
 	"time"
 
 	"life-is-hard/internal/api"
+	"life-is-hard/internal/database"
 	"life-is-hard/internal/service"
 	"life-is-hard/internal/store"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 )
 
-// LoginHandler 使用 Username/Password 驗證並回傳 JWT
 // @Summary     登入使用者
 // @Description 使用 Username 與 Password 進行驗證，回傳存取令牌與到期時間
 // @Tags        auth
@@ -27,7 +25,7 @@ import (
 // @Failure     401      {object} api.ErrorResponse
 // @Failure     500      {object} api.ErrorResponse
 // @Router      /auth/login [post]
-func LoginHandler(pool *pgxpool.Pool) echo.HandlerFunc {
+func LoginHandler(db database.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req api.LoginRequest
 		if err := c.Bind(&req); err != nil {
@@ -37,7 +35,7 @@ func LoginHandler(pool *pgxpool.Pool) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: err.Error()})
 		}
 
-		user, err := store.GetUserByName(c.Request().Context(), pool, req.Username)
+		user, err := store.GetUserByName(c.Request().Context(), db, req.Username)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid credentials"})
 		}

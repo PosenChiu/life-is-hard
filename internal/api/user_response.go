@@ -1,4 +1,3 @@
-// File: internal/api/user_response.go
 package api
 
 import "time"

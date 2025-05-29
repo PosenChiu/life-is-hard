@@ -1,4 +1,3 @@
-// File: internal/api/ping_response.go
 package api
 
 // swagger:model api.PingResponse

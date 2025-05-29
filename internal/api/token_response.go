@@ -1,4 +1,3 @@
-// File: internal/api/token_response.go
 package api
 
 // swagger:model api.TokenResponse

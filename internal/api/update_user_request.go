@@ -1,4 +1,3 @@
-// File: internal/api/update_user_request.go
 package api
 
 // swagger:model api.UpdateUserRequest

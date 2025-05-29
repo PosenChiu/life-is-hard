@@ -1,4 +1,3 @@
-// File: cmd/service/main.go
 // @title        Life Is Hard API
 // @version      1.0
 // @description  這是 Life Is Hard 的後端 API 文件
@@ -44,13 +43,11 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 }
 
 func main() {
-	// 資料庫連線字符串
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		log.Fatal("環境變數 DATABASE_URL 未設定")
 	}
 
-	// Redis 配置
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
 		log.Fatal("環境變數 REDIS_ADDR 未設定")
@@ -60,7 +57,7 @@ func main() {
 	if redisDBStr == "" {
 		log.Fatal("環境變數 REDIS_DB 未設定")
 	}
-	rdbIndex, err := strconv.Atoi(redisDBStr)
+	redisIndex, err := strconv.Atoi(redisDBStr)
 	if err != nil {
 		log.Fatalf("無效的 REDIS_DB: %v", err)
 	}
@@ -70,41 +67,30 @@ func main() {
 		log.Fatal("環境變數 REDIS_PASSWORD 未設定")
 	}
 
-	// 回滾並執行遷移
-	// if err := database.RollbackAll(dbURL); err != nil {
-	// 	log.Fatalf("RollbackAll 失敗: %v", err)
-	// }
+	db, err := database.NewPgxPool(context.Background(), dbURL)
+	if err != nil {
+		log.Fatalf("DB 連線失敗: %v", err)
+	}
+	defer db.Close()
+
+	redis, err := cache.NewRedisClient(redisAddr, redisPassword, redisIndex)
+	if err != nil {
+		log.Fatalf("Redis 連線失敗: %v", err)
+	}
+	defer redis.Close()
+
 	if err := database.RunMigrations(dbURL); err != nil {
 		log.Fatalf("Migration 執行失敗: %v", err)
 	}
 
-	// 建立資料庫連線池
-	pool, err := database.NewPool(context.Background(), dbURL)
-	if err != nil {
-		log.Fatalf("DB 連線失敗: %v", err)
-	}
-	defer pool.Close()
-
-	// 建立 Redis 客戶端
-	rdb, err := cache.NewRedisClient(redisAddr, redisPassword, rdbIndex)
-	if err != nil {
-		log.Fatalf("Redis 連線失敗: %v", err)
-	}
-	defer cache.CloseRedisClient(rdb)
-
-	// Echo 實例及中介層
 	e := echo.New()
 	e.Validator = &CustomValidator{validator: validator.New()}
 	e.Debug = true
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	// 註冊路由並注入 database 與 rdb
-	router.Setup(e, pool, rdb)
+	router.Setup(e, db, redis)
 
-	// Swagger UI
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
-
-	// 啟動服務
 	e.Logger.Fatal(e.Start(":8080"))
 }

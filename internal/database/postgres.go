@@ -1,51 +1,92 @@
-// File: internal/database/postgres.go
 package database
 
 import (
 	"context"
+	"database/sql"
+	"embed"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-type Querier interface {
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
-
-func NewPool(ctx context.Context, url string) (*pgxpool.Pool, error) {
-	cfg, err := pgxpool.ParseConfig(url)
+func NewPgxPool(ctx context.Context, url string) (DB, error) {
+	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		return nil, err
 	}
-	return pgxpool.NewWithConfig(ctx, cfg)
+	return pool, nil
 }
 
-type FakePool struct {
-	QueryRowFn func(ctx context.Context, sql string, args ...any) pgx.Row
-	QueryFn    func(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	ExecFn     func(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-}
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
 
-func (p *FakePool) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
-	if p.QueryRowFn != nil {
-		return p.QueryRowFn(ctx, query, args...)
+// RunMigrations 嵌入並執行 SQL migration (up all)
+func RunMigrations(dbURL string) error {
+	// 建立 *sql.DB 使用 pgx stdlib driver
+	sqlDB, err := sql.Open("pgx", dbURL)
+	if err != nil {
+		return err
 	}
-	panic("unexpected QueryRow")
+	defer sqlDB.Close()
+
+	// 建立 migrate driver for postgres
+	driver, err := postgres.WithInstance(sqlDB, &postgres.Config{})
+	if err != nil {
+		return err
+	}
+
+	// embed migrations from migrationsFS
+	sourceDriver, err := iofs.New(migrationsFS, "migrations")
+	if err != nil {
+		return err
+	}
+
+	// 初始化 migrate
+	m, err := migrate.NewWithInstance("iofs", sourceDriver, "postgres", driver)
+	if err != nil {
+		return err
+	}
+
+	// 執行升級到最新版本
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }
 
-func (p *FakePool) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
-	if p.QueryFn != nil {
-		return p.QueryFn(ctx, query, args...)
+// RollbackAll 退回所有 migration (down to version 0)
+func RollbackAll(dbURL string) error {
+	// 建立 *sql.DB 使用 pgx stdlib driver
+	sqlDB, err := sql.Open("pgx", dbURL)
+	if err != nil {
+		return err
 	}
-	panic("unexpected Query")
-}
+	defer sqlDB.Close()
 
-func (p *FakePool) Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
-	if p.ExecFn != nil {
-		return p.ExecFn(ctx, query, args...)
+	// 建立 migrate driver for postgres
+	driver, err := postgres.WithInstance(sqlDB, &postgres.Config{})
+	if err != nil {
+		return err
 	}
-	panic("unexpected Exec")
+
+	// embed migrations from migrationsFS
+	sourceDriver, err := iofs.New(migrationsFS, "migrations")
+	if err != nil {
+		return err
+	}
+
+	// 初始化 migrate
+	m, err := migrate.NewWithInstance("iofs", sourceDriver, "postgres", driver)
+	if err != nil {
+		return err
+	}
+
+	// 執行回滾到底
+	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }

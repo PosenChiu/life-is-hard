@@ -1,4 +1,3 @@
-// File: internal/store/user.go
 package store
 
 import (
@@ -9,8 +8,8 @@ import (
 	"life-is-hard/internal/model"
 )
 
-func GetUserByID(ctx context.Context, q database.Querier, userID int) (*model.User, error) {
-	row := q.QueryRow(ctx,
+func GetUserByID(ctx context.Context, db database.DB, userID int) (*model.User, error) {
+	row := db.QueryRow(ctx,
 		`SELECT id, name, email, password_hash, created_at, is_admin
 		 FROM users WHERE id = $1`,
 		userID,
@@ -29,8 +28,8 @@ func GetUserByID(ctx context.Context, q database.Querier, userID int) (*model.Us
 	return u, nil
 }
 
-func GetUserByName(ctx context.Context, q database.Querier, userName string) (*model.User, error) {
-	row := q.QueryRow(ctx,
+func GetUserByName(ctx context.Context, db database.DB, userName string) (*model.User, error) {
+	row := db.QueryRow(ctx,
 		`SELECT id, name, email, password_hash, created_at, is_admin
 		 FROM users WHERE name = $1`,
 		userName,
@@ -49,8 +48,8 @@ func GetUserByName(ctx context.Context, q database.Querier, userName string) (*m
 	return u, nil
 }
 
-func CreateUser(ctx context.Context, q database.Querier, u *model.User) (*model.User, error) {
-	row := q.QueryRow(ctx,
+func CreateUser(ctx context.Context, db database.DB, u *model.User) (*model.User, error) {
+	row := db.QueryRow(ctx,
 		`INSERT INTO users (name, email, password_hash, is_admin)
 		 VALUES ($1, $2, $3, $4)
 		 RETURNING id, created_at`,
@@ -65,8 +64,8 @@ func CreateUser(ctx context.Context, q database.Querier, u *model.User) (*model.
 	return u, nil
 }
 
-func UpdateUser(ctx context.Context, q database.Querier, u *model.User) error {
-	_, err := q.Exec(ctx,
+func UpdateUser(ctx context.Context, db database.DB, u *model.User) error {
+	_, err := db.Exec(ctx,
 		`UPDATE users SET name = $1, email = $2, is_admin = $3
 		 WHERE id = $4`,
 		u.Name,
@@ -80,8 +79,8 @@ func UpdateUser(ctx context.Context, q database.Querier, u *model.User) error {
 	return nil
 }
 
-func UpdateUserPassword(ctx context.Context, q database.Querier, userID int, passwordHash string) error {
-	_, err := q.Exec(ctx,
+func UpdateUserPassword(ctx context.Context, db database.DB, userID int, passwordHash string) error {
+	_, err := db.Exec(ctx,
 		`UPDATE users
 		 SET password_hash = $1
 		 WHERE id = $2`,
@@ -94,8 +93,8 @@ func UpdateUserPassword(ctx context.Context, q database.Querier, userID int, pas
 	return nil
 }
 
-func DeleteUser(ctx context.Context, q database.Querier, ID int) error {
-	_, err := q.Exec(ctx,
+func DeleteUser(ctx context.Context, db database.DB, ID int) error {
+	_, err := db.Exec(ctx,
 		`DELETE FROM users WHERE id = $1`,
 		ID,
 	)

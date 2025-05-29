@@ -1,4 +1,3 @@
-// File: internal/api/create_user_request.go
 package api
 
 // swagger:model api.CreateUserRequest

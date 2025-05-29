@@ -1,4 +1,3 @@
-// File: internal/api/login_response.go
 package api
 
 // swagger:model api.LoginResponse

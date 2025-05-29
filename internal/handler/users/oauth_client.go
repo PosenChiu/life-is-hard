@@ -1,5 +1,3 @@
-// File: internal/handler/users/oauth_client.go
-
 package users
 
 import (
@@ -7,16 +5,15 @@ import (
 	"time"
 
 	"life-is-hard/internal/api"
+	"life-is-hard/internal/database"
 	"life-is-hard/internal/middleware"
 	"life-is-hard/internal/model"
 	"life-is-hard/internal/service"
 	"life-is-hard/internal/store"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 )
 
-// CreateMyOAuthClientHandler handles POST /users/me/oauth/clients
 // @Summary     Create OAuth client for authenticated user
 // @Tags        users
 // @Accept      json
@@ -29,8 +26,8 @@ import (
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
-// @Router      /users/me/oauth/clients [post]
-func CreateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
+// @Router      /users/me/oauth-clients [post]
+func CreateMyOAuthClientHandler(db database.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {
@@ -65,7 +62,6 @@ func CreateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// ListMyOAuthClientsHandler handles GET /users/me/oauth/clients
 // @Summary     List OAuth clients for authenticated user
 // @Tags        users
 // @Accept      json
@@ -76,8 +72,8 @@ func CreateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
-// @Router      /users/me/oauth/clients [get]
-func ListMyOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
+// @Router      /users/me/oauth-clients [get]
+func ListMyOAuthClientsHandler(db database.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {
@@ -104,7 +100,6 @@ func ListMyOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// GetMyOAuthClientHandler handles GET /users/me/oauth/clients/{client_id}
 // @Summary     Get OAuth client for authenticated user
 // @Tags        users
 // @Accept      json
@@ -118,8 +113,8 @@ func ListMyOAuthClientsHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
-// @Router      /users/me/oauth/clients/{client_id} [get]
-func GetMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
+// @Router      /users/me/oauth-clients/{client_id} [get]
+func GetMyOAuthClientHandler(db database.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {
@@ -145,7 +140,6 @@ func GetMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// UpdateMyOAuthClientHandler handles PUT /users/me/oauth/clients/{client_id}
 // @Summary     Update OAuth client for authenticated user
 // @Tags        users
 // @Accept      json
@@ -160,8 +154,8 @@ func GetMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
-// @Router      /users/me/oauth/clients/{client_id} [put]
-func UpdateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
+// @Router      /users/me/oauth-clients/{client_id} [put]
+func UpdateMyOAuthClientHandler(db database.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {
@@ -203,7 +197,6 @@ func UpdateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// DeleteMyOAuthClientHandler handles DELETE /users/me/oauth/clients/{client_id}
 // @Summary     Delete OAuth client for authenticated user
 // @Tags        users
 // @Accept      json
@@ -217,8 +210,8 @@ func UpdateMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
 // @Security    ApiKeyAuth
 // @Security    OAuth2Application
 // @Security    OAuth2Password
-// @Router      /users/me/oauth/clients/{client_id} [delete]
-func DeleteMyOAuthClientHandler(db *pgxpool.Pool) echo.HandlerFunc {
+// @Router      /users/me/oauth-clients/{client_id} [delete]
+func DeleteMyOAuthClientHandler(db database.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claims, ok := c.Get(middleware.ContextUserKey).(*service.CustomClaims)
 		if !ok || claims.UserID == 0 {

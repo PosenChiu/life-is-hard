@@ -1,4 +1,3 @@
-// File: internal/service/authentication.go
 package service
 
 import (
@@ -11,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"life-is-hard/internal/cache"
 	"life-is-hard/internal/model"
 
 	"github.com/redis/go-redis/v9"
@@ -114,7 +114,7 @@ func VerifyAccessToken(tokenString string) (*CustomClaims, error) {
 	return claims, nil
 }
 
-func IssueRefreshToken(ctx context.Context, rdb *redis.Client, userID int, clientID string, isAdmin bool, ttl time.Duration) (string, error) {
+func IssueRefreshToken(ctx context.Context, cache cache.Cache, userID int, clientID string, isAdmin bool, ttl time.Duration) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", fmt.Errorf("failed to generate refresh token: %w", err)
@@ -126,15 +126,15 @@ func IssueRefreshToken(ctx context.Context, rdb *redis.Client, userID int, clien
 		return "", fmt.Errorf("failed to marshal refresh token data: %w", err)
 	}
 	key := fmt.Sprintf("refresh_token:%s", token)
-	if err := rdb.Set(ctx, key, bytesData, ttl).Err(); err != nil {
+	if err := cache.Set(ctx, key, bytesData, ttl).Err(); err != nil {
 		return "", fmt.Errorf("failed to store refresh token: %w", err)
 	}
 	return token, nil
 }
 
-func ValidateRefreshToken(ctx context.Context, rdb *redis.Client, token string) (*RefreshTokenData, error) {
+func ValidateRefreshToken(ctx context.Context, cache cache.Cache, token string) (*RefreshTokenData, error) {
 	key := fmt.Sprintf("refresh_token:%s", token)
-	val, err := rdb.Get(ctx, key).Result()
+	val, err := cache.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, fmt.Errorf("refresh token not found or expired")
