@@ -1,0 +1,716 @@
+basePath: /api
+definitions:
+  api.CreateOAuthClientRequest:
+    properties:
+      client_id:
+        example: my-client
+        type: string
+      client_secret:
+        example: secret
+        type: string
+      grant_types:
+        example:
+        - password
+        - client_credentials
+        - refresh_token
+        items:
+          type: string
+        type: array
+    required:
+    - client_id
+    - client_secret
+    - grant_types
+    type: object
+  api.ErrorResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  api.LoginResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOi...
+        type: string
+    type: object
+  api.OAuthClientResponse:
+    properties:
+      client_id:
+        example: my-client
+        type: string
+      client_secret:
+        example: secret
+        type: string
+      created_at:
+        type: string
+      grant_types:
+        example:
+        - password
+        - client_credentials
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+      user_id:
+        example: 42
+        type: integer
+    type: object
+  api.PingResponse:
+    properties:
+      message:
+        example: pong
+        type: string
+    type: object
+  api.TokenResponse:
+    properties:
+      access_token:
+        example: '...'
+        type: string
+      expires_in:
+        example: 86400
+        type: integer
+      refresh_token:
+        example: '...'
+        type: string
+      token_type:
+        example: Bearer
+        type: string
+    type: object
+  api.UpdateOAuthClientRequest:
+    properties:
+      client_secret:
+        example: new-secret
+        type: string
+      grant_types:
+        example:
+        - password
+        - client_credentials
+        - refresh_token
+        items:
+          type: string
+        type: array
+    required:
+    - client_secret
+    - grant_types
+    type: object
+  api.UserResponse:
+    properties:
+      created_at:
+        example: 2025-05-01T15:04:05Z07:00
+        type: string
+      email:
+        example: alice@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_admin:
+        example: false
+        type: boolean
+      name:
+        example: Alice
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 這是 Life Is Hard 的後端 API 文件
+  title: Life Is Hard API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: 使用 Username 與 Password 進行驗證，回傳存取令牌與到期時間
+      parameters:
+      - description: 使用者名稱
+        in: formData
+        name: username
+        required: true
+        type: string
+      - description: 使用者密碼
+        in: formData
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: 登入使用者
+      tags:
+      - auth
+  /oauth/token:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Issue a JWT access token (and refresh token if applicable) using
+        OAuth2 grant_type
+      parameters:
+      - description: Basic base64(client_id:client_secret)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 'Grant type: password, client_credentials, or refresh_token'
+        in: formData
+        name: grant_type
+        required: true
+        type: string
+      - description: Username (required for password grant)
+        in: formData
+        name: username
+        type: string
+      - description: Password (required for password grant)
+        in: formData
+        name: password
+        type: string
+      - description: Refresh token (required for refresh_token grant)
+        in: formData
+        name: refresh_token
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: OAuth2 obtain access token
+      tags:
+      - oauth
+  /ping:
+    get:
+      consumes:
+      - application/json
+      description: 回傳 pong，並檢查資料庫連線是否正常，同時在 Redis 設置一個示例鍵值
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.PingResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Health Check
+      tags:
+      - ping
+  /users:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: 接收使用者表單資料並建立新帳號 (Email 會自動轉小寫)
+      parameters:
+      - description: 使用者姓名
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: 使用者 Email (lowercase)
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: 使用者密碼
+        in: formData
+        name: password
+        required: true
+        type: string
+      - description: 是否為管理員
+        in: formData
+        name: is_admin
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Create a new user
+      tags:
+      - users
+  /users/{user_id}:
+    delete:
+      description: 根據使用者 ID 刪除使用者帳號
+      parameters:
+      - description: 使用者 ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: 參數錯誤
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: 伺服器錯誤
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Delete a user by ID
+      tags:
+      - users
+    get:
+      description: 透過 ID 查詢並回傳使用者詳細資料
+      parameters:
+      - description: 使用者 ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.UserResponse'
+        "400":
+          description: 參數錯誤
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: 使用者不存在
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: 伺服器錯誤
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Get a user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: 根據使用者 ID 更新使用者姓名、Email 及管理員狀態
+      parameters:
+      - description: 使用者 ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: 使用者姓名
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: 使用者 Email (lowercase)
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: 是否為管理員
+        in: formData
+        name: is_admin
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Update a user by ID
+      tags:
+      - users
+  /users/me:
+    delete:
+      description: 使用 JWT Token 刪除當前使用者帳號
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Delete current user
+      tags:
+      - users
+    get:
+      description: 透過 JWT Token 取得當前使用者詳細資訊
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Get current user info
+      tags:
+      - users
+    put:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: 使用 JWT 更新當前使用者姓名和 Email
+      parameters:
+      - description: 使用者姓名
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: 使用者 Email (lowercase)
+        in: formData
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Update current user info
+      tags:
+      - users
+  /users/me/oauth-clients:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.OAuthClientResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: List OAuth clients for authenticated user
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create OAuth client
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateOAuthClientRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.OAuthClientResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Create OAuth client for authenticated user
+      tags:
+      - users
+  /users/me/oauth-clients/{client_id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Client ID
+        in: path
+        name: client_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Delete OAuth client for authenticated user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Client ID
+        in: path
+        name: client_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.OAuthClientResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Get OAuth client for authenticated user
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Client ID
+        in: path
+        name: client_id
+        required: true
+        type: integer
+      - description: Update OAuth client
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateOAuthClientRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.OAuthClientResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Update OAuth client for authenticated user
+      tags:
+      - users
+  /users/me/password:
+    patch:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: 驗證舊密碼並更新為新密碼
+      parameters:
+      - description: 當前密碼
+        in: formData
+        name: old_password
+        required: true
+        type: string
+      - description: 新密碼
+        in: formData
+        name: new_password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - OAuth2Application: []
+      - OAuth2Password: []
+      summary: Update own password
+      tags:
+      - users
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+  OAuth2Application:
+    flow: application
+    tokenUrl: /api/oauth/token
+    type: oauth2
+  OAuth2Password:
+    flow: password
+    tokenUrl: /api/oauth/token
+    type: oauth2
+swagger: "2.0"
