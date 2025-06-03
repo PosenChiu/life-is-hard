@@ -13,9 +13,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.3'
-      - name: Install swag
-        run: go install github.com/swaggo/swag/cmd/swag@latest
-      - name: Generate Swagger docs
-        run: swag init -g service.go -d cmd/service,internal/api,internal/handler
+      - name: Initialize project
+        run: make init
       - name: Run tests
         run: make test
