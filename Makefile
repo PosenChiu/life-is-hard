@@ -36,7 +36,7 @@ run: kill
 dev: $(AIR) $(SWAG)
 	@$(AIR) \
 		-build.bin "./tmp/main" \
-		-build.exclude_dir "docs,prompt,tmp" \
+		-build.exclude_dir "docs,tmp" \
 		-build.cmd "\
 			$(SWAG) init -g service.go -d cmd/service,internal/api,internal/handler \
 			&& go mod tidy \
@@ -52,30 +52,3 @@ test:
 	@go test -coverprofile=coverage.out -coverpkg=./... ./...
 	@go tool cover -html=coverage.out -o coverage.html
 	@go tool cover -func=coverage.out
-
-override rglob = \
-  $(wildcard $(foreach p,$(2),$(1)/$(p))) \
-  $(foreach d,$(filter-out $(1)/. $(1)/..,$(wildcard $(1)/* $(1)/.*)),$(call rglob,$d,$(2)))
-
-PROMPT_DIRS := cmd internal
-PROMPT_PATTERNS := *.go *.sql *.md
-PROMPT_FILES := config.mk go.mod go.sum
-
-define FORMAT_FILE_TO_MD
-printf '## %s\n\n' "$(1)" >> "$(2)"
-printf '````````````````' >> "$(2)"
-printf '\n'               >> "$(2)"
-cat "$(1)"                >> "$(2)"
-printf '\n'               >> "$(2)"
-printf '````````````````' >> "$(2)"
-printf '\n'               >> "$(2)"
-printf '\n'               >> "$(2)"
-endef
-
-.PHONY: prompt
-prompt: $(PROMPT_FILES) $(sort $(foreach dir,$(PROMPT_DIRS),$(call rglob,$(dir),$(PROMPT_PATTERNS))))
-	@printf '# Created by Makefile automatically.\n.gitignore\n' > $@/.gitignore
-	@printf 'CODE.md\n' >> $@/.gitignore
-	@printf '# Aggregated Code\n\n' > $@/CODE.md
-	@$(foreach f,$^,$(call FORMAT_FILE_TO_MD,$f,$@/CODE.md);)
-	@printf 'Prompt: \033[36mRead the README.md CODE.md I provided before typing my question.\033[0m\n'
