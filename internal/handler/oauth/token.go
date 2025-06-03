@@ -16,6 +16,18 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// 方便測試時取代底層依賴
+var (
+	getOAuthClientByClientID = store.GetOAuthClientByClientID
+	getUserByName            = store.GetUserByName
+	getUserByID              = store.GetUserByID
+	authenticateUser         = service.AuthenticateUser
+	issueAccessToken         = service.IssueAccessToken
+	issueRefreshToken        = service.IssueRefreshToken
+	issueClientAccessToken   = service.IssueClientAccessToken
+	validateRefreshToken     = service.ValidateRefreshToken
+)
+
 // @Summary     OAuth2 obtain access token
 // @Description Issue a JWT access token (and refresh token if applicable) using OAuth2 grant_type
 // @Tags        oauth
@@ -57,7 +69,7 @@ func TokenHandler(db database.DB, cache cache.Cache) echo.HandlerFunc {
 		req.ClientSecret = parts[1]
 
 		// 驗證 client
-		oc, err := store.GetOAuthClientByClientID(ctx, db, req.ClientID)
+		oc, err := getOAuthClientByClientID(ctx, db, req.ClientID)
 		if err != nil || oc.ClientSecret != req.ClientSecret {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid client credentials"})
 		}
@@ -78,46 +90,46 @@ func TokenHandler(db database.DB, cache cache.Cache) echo.HandlerFunc {
 
 		switch req.GrantType {
 		case "password":
-			user, err := store.GetUserByName(ctx, db, req.Username)
+			user, err := getUserByName(ctx, db, req.Username)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid credentials"})
 			}
-			if err := service.AuthenticateUser(ctx, *user, req.Password); err != nil {
+			if err := authenticateUser(ctx, *user, req.Password); err != nil {
 				return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid credentials"})
 			}
 
 			// 發行 access token
-			tokenStr, err = service.IssueAccessToken(*user, 24*time.Hour)
+			tokenStr, err = issueAccessToken(*user, 24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to issue token"})
 			}
 
 			// 發行 refresh token
-			newRefreshToken, err = service.IssueRefreshToken(ctx, cache, user.ID, oc.ClientID, user.IsAdmin, 30*24*time.Hour)
+			newRefreshToken, err = issueRefreshToken(ctx, cache, user.ID, oc.ClientID, user.IsAdmin, 30*24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to issue refresh token"})
 			}
 
 		case "client_credentials":
 			// 為 client 自身（由 owner）發行 access token
-			owner, err := store.GetUserByID(ctx, db, oc.UserID)
+			owner, err := getUserByID(ctx, db, oc.UserID)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to retrieve client owner"})
 			}
 
-			tokenStr, err = service.IssueClientAccessToken(*owner, *oc, 24*time.Hour)
+			tokenStr, err = issueClientAccessToken(*owner, *oc, 24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to issue token"})
 			}
 
 		case "refresh_token":
 			// 驗證並讀取 refresh token
-			data, err := service.ValidateRefreshToken(ctx, cache, req.RefreshToken)
+			data, err := validateRefreshToken(ctx, cache, req.RefreshToken)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid refresh token"})
 			}
 			// 重新發行 access token
-			tokenStr, err = service.IssueAccessToken(model.User{ID: data.UserID, IsAdmin: false}, 24*time.Hour)
+			tokenStr, err = issueAccessToken(model.User{ID: data.UserID, IsAdmin: false}, 24*time.Hour)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to issue token"})
 			}
