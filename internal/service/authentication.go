@@ -19,6 +19,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	bcryptGenerateFromPassword   = bcrypt.GenerateFromPassword
+	bcryptCompareHashAndPassword = bcrypt.CompareHashAndPassword
+	randRead                     = rand.Read
+	jsonMarshal                  = json.Marshal
+	jsonUnmarshal                = json.Unmarshal
+	timeNow                      = time.Now
+	parseWithClaims              = jwt.ParseWithClaims
+)
+
 type CustomClaims struct {
 	UserID   int    `json:"user_id,omitempty"`
 	ClientID string `json:"client_id,omitempty"`
@@ -33,7 +43,7 @@ type RefreshTokenData struct {
 }
 
 func HashPassword(password string) (string, error) {
-	hashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashBytes, err := bcryptGenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
 	}
@@ -41,7 +51,7 @@ func HashPassword(password string) (string, error) {
 }
 
 func ComparePassword(hash string, password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return bcryptCompareHashAndPassword([]byte(hash), []byte(password))
 }
 
 func AuthenticateUser(ctx context.Context, user model.User, password string) error {
@@ -56,7 +66,7 @@ func IssueAccessToken(user model.User, ttl time.Duration) (string, error) {
 	if secret == "" {
 		return "", fmt.Errorf("JWT_SECRET not set")
 	}
-	now := time.Now()
+	now := timeNow()
 	claims := CustomClaims{
 		UserID:  user.ID,
 		IsAdmin: user.IsAdmin,
@@ -78,7 +88,7 @@ func IssueClientAccessToken(user model.User, client model.OAuthClient, ttl time.
 	if user.ID != client.UserID {
 		return "", fmt.Errorf("user %d is not the owner of client %s", user.ID, client.ClientID)
 	}
-	now := time.Now()
+	now := timeNow()
 	claims := CustomClaims{
 		UserID:   user.ID,
 		ClientID: client.ClientID,
@@ -98,7 +108,7 @@ func VerifyAccessToken(tokenString string) (*CustomClaims, error) {
 	if secret == "" {
 		return nil, fmt.Errorf("JWT_SECRET not set")
 	}
-	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
+	token, err := parseWithClaims(tokenString, &CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
@@ -116,12 +126,12 @@ func VerifyAccessToken(tokenString string) (*CustomClaims, error) {
 
 func IssueRefreshToken(ctx context.Context, cache cache.Cache, userID int, clientID string, isAdmin bool, ttl time.Duration) (string, error) {
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
+	if _, err := randRead(b); err != nil {
 		return "", fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 	token := base64.RawURLEncoding.EncodeToString(b)
 	data := RefreshTokenData{UserID: userID, ClientID: clientID, IsAdmin: isAdmin}
-	bytesData, err := json.Marshal(data)
+	bytesData, err := jsonMarshal(data)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal refresh token data: %w", err)
 	}
@@ -142,7 +152,7 @@ func ValidateRefreshToken(ctx context.Context, cache cache.Cache, token string) 
 		return nil, fmt.Errorf("failed to retrieve refresh token: %w", err)
 	}
 	var data RefreshTokenData
-	if err := json.Unmarshal([]byte(val), &data); err != nil {
+	if err := jsonUnmarshal([]byte(val), &data); err != nil {
 		return nil, fmt.Errorf("failed to parse refresh token data: %w", err)
 	}
 	return &data, nil
