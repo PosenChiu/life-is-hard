@@ -1,7 +1,7 @@
 include config.mk
 
-AIR ?= $(shell go env GOBIN)/air
-SWAG ?= $(shell go env GOBIN)/swag
+AIR ?= $(firstword $(shell command -v air) $(shell go env GOBIN)/air)
+SWAG ?= $(firstword $(shell command -v swag) $(shell go env GOBIN)/swag)
 
 $(AIR):
 	go install github.com/air-verse/air@latest
@@ -39,14 +39,16 @@ init: $(SWAG)
 	@go fmt ./...
 	@go vet ./...
 	@go build -o ./tmp/main cmd/service/service.go
-	@printf "# Created by Makefile automatically.\n*\n" | tee {docs,tmp}/.gitignore >/dev/null
 
 .PHONY: dev
 dev: $(AIR) $(SWAG)
 	@$(AIR) \
 		-build.bin "./tmp/main" \
 		-build.exclude_dir "docs,tmp" \
-		-build.cmd "$(MAKE) init && printf '\nOpen Swagger: \033[36mhttp://localhost:8080/swagger/index.html\033[0m\n\n'"
+		-build.cmd "$(MAKE) init \
+			&& printf '# Created by Makefile automatically.\n*\n' | tee {docs,tmp}/.gitignore >/dev/null \
+			&& printf '\nOpen Swagger: \033[36mhttp://localhost:8080/swagger/index.html\033[0m\n\n' \
+		"
 
 .PHONY: test
 test:
