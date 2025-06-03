@@ -1,0 +1,3 @@
+package docs
+
+func init() {}
