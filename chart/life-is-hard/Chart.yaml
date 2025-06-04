@@ -1,0 +1,14 @@
+apiVersion: v2
+name: life-is-hard
+description: Helm chart for the life-is-hard backend service
+version: 0.1.0
+appVersion: "1.0.0"
+type: application
+
+dependencies:
+  - name: postgresql
+    version: "12.9.1"
+    repository: "https://charts.bitnami.com/bitnami"
+  - name: redis
+    version: "18.3.2"
+    repository: "https://charts.bitnami.com/bitnami"

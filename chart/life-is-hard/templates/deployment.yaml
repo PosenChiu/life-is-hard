@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "life-is-hard.fullname" . }}
+  labels:
+    {{- include "life-is-hard.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "life-is-hard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "life-is-hard.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ include \"life-is-hard.postgresql.fullname\" . }}:5432/{{ .Values.postgresql.auth.database }}"
+            - name: REDIS_ADDR
+              value: "{{ include \"life-is-hard.redis.fullname\" . }}-master:6379"
+            - name: REDIS_DB
+              value: "{{ .Values.env.redisDb }}"
+            - name: REDIS_PASSWORD
+              value: "{{ .Values.redis.auth.password }}"
+            - name: JWT_SECRET
+              value: "{{ .Values.env.jwtSecret }}"
+            - name: WORKER_PROCESSES
+              value: "{{ .Values.env.workerProcesses }}"
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

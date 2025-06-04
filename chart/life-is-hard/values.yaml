@@ -1,0 +1,35 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/example/life-is-hard
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+env:
+  workerProcesses: "4"
+  jwtSecret: "CHANGE_ME"
+  redisDb: "0"
+
+resources: {}
+
+postgresql:
+  auth:
+    username: lifeishard
+    password: strong-db-pass
+    database: lifeishard
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+redis:
+  auth:
+    password: strong-redis-pass
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
