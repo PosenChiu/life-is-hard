@@ -16,6 +16,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var (
+	hashPassword       = service.HashPassword
+	authenticateUser   = service.AuthenticateUser
+	createUser         = store.CreateUser
+	getUserByID        = store.GetUserByID
+	updateUser         = store.UpdateUser
+	updateUserPassword = store.UpdateUserPassword
+	deleteUser         = store.DeleteUser
+)
+
 // @Summary     Create a new user
 // @Description 接收使用者表單資料並建立新帳號 (Email 會自動轉小寫)
 // @Tags        users
@@ -42,7 +52,7 @@ func CreateUserHandler(db database.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: err.Error()})
 		}
 
-		hash, err := service.HashPassword(req.Password)
+		hash, err := hashPassword(req.Password)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "failed to hash password"})
 		}
@@ -52,7 +62,7 @@ func CreateUserHandler(db database.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid email format"})
 		}
 
-		user, err := store.CreateUser(c.Request().Context(), db, &model.User{
+		user, err := createUser(c.Request().Context(), db, &model.User{
 			Name:         req.Name,
 			Email:        req.Email,
 			PasswordHash: hash,
@@ -91,7 +101,7 @@ func GetUserHandler(db database.DB) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid user ID"})
 		}
-		user, err := store.GetUserByID(c.Request().Context(), db, id)
+		user, err := getUserByID(c.Request().Context(), db, id)
 		if err != nil {
 			return c.JSON(http.StatusNotFound, api.ErrorResponse{Message: "user not found"})
 		}
@@ -142,7 +152,7 @@ func UpdateUserHandler(db database.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid email format"})
 		}
 
-		if err := store.UpdateUser(c.Request().Context(), db, &model.User{
+		if err := updateUser(c.Request().Context(), db, &model.User{
 			ID:    id,
 			Name:  req.Name,
 			Email: req.Email,
@@ -171,7 +181,7 @@ func DeleteUserHandler(db database.DB) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid user ID"})
 		}
-		if err := store.DeleteUser(c.Request().Context(), db, id); err != nil {
+		if err := deleteUser(c.Request().Context(), db, id); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)
@@ -195,7 +205,7 @@ func GetMyUserHandler(db database.DB) echo.HandlerFunc {
 		if !ok || claims.UserID == 0 {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
-		user, err := store.GetUserByID(c.Request().Context(), db, claims.UserID)
+		user, err := getUserByID(c.Request().Context(), db, claims.UserID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
@@ -244,7 +254,7 @@ func UpdateMyUserHandler(db database.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, api.ErrorResponse{Message: "invalid email format"})
 		}
 
-		err := store.UpdateUser(c.Request().Context(), db, &model.User{
+		err := updateUser(c.Request().Context(), db, &model.User{
 			ID:    claims.UserID,
 			Name:  req.Name,
 			Email: req.Email,
@@ -287,21 +297,21 @@ func UpdateMyUserPasswordHandler(db database.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
 
-		user, err := store.GetUserByID(c.Request().Context(), db, claims.UserID)
+		user, err := getUserByID(c.Request().Context(), db, claims.UserID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 
-		if err := service.AuthenticateUser(c.Request().Context(), *user, req.OldPassword); err != nil {
+		if err := authenticateUser(c.Request().Context(), *user, req.OldPassword); err != nil {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid current password"})
 		}
 
-		hash, err := service.HashPassword(req.NewPassword)
+		hash, err := hashPassword(req.NewPassword)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: "failed to hash new password"})
 		}
 
-		if err := store.UpdateUserPassword(c.Request().Context(), db, claims.UserID, hash); err != nil {
+		if err := updateUserPassword(c.Request().Context(), db, claims.UserID, hash); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 
@@ -326,7 +336,7 @@ func DeleteMyUserHandler(db database.DB) echo.HandlerFunc {
 		if !ok || claims.UserID == 0 {
 			return c.JSON(http.StatusUnauthorized, api.ErrorResponse{Message: "invalid or missing token"})
 		}
-		if err := store.DeleteUser(c.Request().Context(), db, claims.UserID); err != nil {
+		if err := deleteUser(c.Request().Context(), db, claims.UserID); err != nil {
 			return c.JSON(http.StatusInternalServerError, api.ErrorResponse{Message: err.Error()})
 		}
 		return c.NoContent(http.StatusNoContent)
