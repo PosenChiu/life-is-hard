@@ -18,6 +18,7 @@ func restoreGlobals() {
 	newRedisClient = cache.NewRedisClient
 	runMigrationsFn = database.RunMigrations
 	startServer = func(e *echo.Echo, addr string) error { return e.Start(addr) }
+	spawnWorkers = defaultSpawnWorkers
 	exitFunc = func(code int) {}
 }
 
@@ -61,8 +62,26 @@ func TestRunSuccess(t *testing.T) {
 	require.True(t, called["redisClose"])
 }
 
+func TestRunSpawnWorkers(t *testing.T) {
+	t.Cleanup(restoreGlobals)
+	called := 0
+	spawnWorkers = func(n int) error { called = n; return nil }
+	t.Setenv("DATABASE_URL", "db")
+	t.Setenv("REDIS_ADDR", "127")
+	t.Setenv("REDIS_DB", "1")
+	t.Setenv("REDIS_PASSWORD", "pw")
+	t.Setenv("WORKER_PROCESSES", "3")
+	require.NoError(t, run())
+	require.Equal(t, 3, called)
+}
+
 func TestRunErrors(t *testing.T) {
 	t.Cleanup(restoreGlobals)
+	t.Setenv("WORKER_PROCESSES", "0")
+	require.Error(t, run())
+	t.Setenv("WORKER_PROCESSES", "bad")
+	require.Error(t, run())
+	t.Setenv("WORKER_PROCESSES", "1")
 	t.Setenv("DATABASE_URL", "")
 	require.Error(t, run())
 	t.Setenv("DATABASE_URL", "db")

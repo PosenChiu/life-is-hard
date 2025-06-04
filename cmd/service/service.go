@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 
 	"life-is-hard/internal/cache"
@@ -48,10 +49,23 @@ var (
 	newRedisClient  = cache.NewRedisClient
 	runMigrationsFn = database.RunMigrations
 	startServer     = func(e *echo.Echo, addr string) error { return e.Start(addr) }
+	spawnWorkers    = defaultSpawnWorkers
 	exitFunc        = os.Exit
 )
 
 func run() error {
+	workersStr := os.Getenv("WORKER_PROCESSES")
+	if workersStr == "" {
+		workersStr = "1"
+	}
+	workers, err := strconv.Atoi(workersStr)
+	if err != nil || workers < 1 {
+		return fmt.Errorf("無效的 WORKER_PROCESSES: %v", err)
+	}
+	if workers > 1 && os.Getenv("IS_WORKER") == "" {
+		return spawnWorkers(workers)
+	}
+
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		return fmt.Errorf("環境變數 DATABASE_URL 未設定")
@@ -109,4 +123,17 @@ func main() {
 		log.Print(err)
 		exitFunc(1)
 	}
+}
+
+func defaultSpawnWorkers(n int) error {
+	for i := 0; i < n; i++ {
+		cmd := exec.Command(os.Args[0])
+		cmd.Env = append(os.Environ(), fmt.Sprintf("IS_WORKER=%d", i+1))
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
