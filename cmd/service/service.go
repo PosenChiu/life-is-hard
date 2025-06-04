@@ -22,6 +22,7 @@ import (
 	"life-is-hard/internal/cache"
 	"life-is-hard/internal/database"
 	"life-is-hard/internal/router"
+	"life-is-hard/internal/worker"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -48,6 +49,7 @@ var (
 	newRedisClient  = cache.NewRedisClient
 	runMigrationsFn = database.RunMigrations
 	startServer     = func(e *echo.Echo, addr string) error { return e.Start(addr) }
+	newWorkerPool   = worker.NewPool
 	exitFunc        = os.Exit
 )
 
@@ -76,6 +78,15 @@ func run() error {
 		return fmt.Errorf("環境變數 REDIS_PASSWORD 未設定")
 	}
 
+	workerCount := 1
+	if v := os.Getenv("WORKER_COUNT"); v != "" {
+		c, err := strconv.Atoi(v)
+		if err != nil || c <= 0 {
+			return fmt.Errorf("無效的 WORKER_COUNT: %v", err)
+		}
+		workerCount = c
+	}
+
 	db, err := newPgxPool(context.Background(), dbURL)
 	if err != nil {
 		return fmt.Errorf("DB 連線失敗: %v", err)
@@ -91,6 +102,9 @@ func run() error {
 	if err := runMigrationsFn(dbURL); err != nil {
 		return fmt.Errorf("Migration 執行失敗: %v", err)
 	}
+
+	wp := newWorkerPool(workerCount)
+	defer wp.Stop()
 
 	e := echo.New()
 	e.Validator = &CustomValidator{validator: validator.New()}

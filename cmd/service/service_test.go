@@ -11,13 +11,24 @@ import (
 
 	"life-is-hard/internal/cache"
 	"life-is-hard/internal/database"
+	"life-is-hard/internal/worker"
 )
+
+type fakePool struct{ stopFn func() }
+
+func (f *fakePool) Submit(worker.Task) {}
+func (f *fakePool) Stop() {
+	if f.stopFn != nil {
+		f.stopFn()
+	}
+}
 
 func restoreGlobals() {
 	newPgxPool = database.NewPgxPool
 	newRedisClient = cache.NewRedisClient
 	runMigrationsFn = database.RunMigrations
 	startServer = func(e *echo.Echo, addr string) error { return e.Start(addr) }
+	newWorkerPool = worker.NewPool
 	exitFunc = func(code int) {}
 }
 
@@ -46,11 +57,18 @@ func TestRunSuccess(t *testing.T) {
 	}
 	runMigrationsFn = func(url string) error { called["migrate"] = true; return nil }
 	startServer = func(e *echo.Echo, addr string) error { called["start"] = true; return nil }
+	newWorkerPool = func(n int) worker.Pool {
+		if n == 2 {
+			called["worker"] = true
+		}
+		return &fakePool{stopFn: func() { called["workerStop"] = true }}
+	}
 
 	t.Setenv("DATABASE_URL", "db")
 	t.Setenv("REDIS_ADDR", "127")
 	t.Setenv("REDIS_DB", "1")
 	t.Setenv("REDIS_PASSWORD", "pw")
+	t.Setenv("WORKER_COUNT", "2")
 
 	require.NoError(t, run())
 	require.True(t, called["pgx"])
@@ -59,6 +77,8 @@ func TestRunSuccess(t *testing.T) {
 	require.True(t, called["start"])
 	require.True(t, called["dbClose"])
 	require.True(t, called["redisClose"])
+	require.True(t, called["worker"])
+	require.True(t, called["workerStop"])
 }
 
 func TestRunErrors(t *testing.T) {
@@ -79,6 +99,11 @@ func TestRunErrors(t *testing.T) {
 	require.Error(t, run())
 
 	t.Setenv("REDIS_PASSWORD", "pw")
+	t.Setenv("WORKER_COUNT", "bad")
+	require.Error(t, run())
+	t.Setenv("WORKER_COUNT", "0")
+	require.Error(t, run())
+	t.Setenv("WORKER_COUNT", "1")
 	newPgxPool = func(context.Context, string) (database.DB, error) { return nil, errors.New("db") }
 	require.Error(t, run())
 
