@@ -54,3 +54,7 @@ dev: $(AIR) $(SWAG)
 test:
 	@go test -coverprofile=coverage.out -coverpkg=./... ./...
 	@go tool cover -func=coverage.out
+	@if ! go tool cover -func=coverage.out | grep -q '100.0%'; then \
+	       echo "Coverage must be 100%"; \
+	       exit 1; \
+	fi
