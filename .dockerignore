@@ -1,0 +1,5 @@
+# Ignore the temporary build output
+/tmp
+.docs
+coverage.out
+*.log
