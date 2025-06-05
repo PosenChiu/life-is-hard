@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: life-is-hard-postgres
+    environment:
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:latest
+    container_name: life-is-hard-redis
+    command: redis-server --requirepass password
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+  service:
+    build: .
+    container_name: life-is-hard-service
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DATABASE_URL: postgres://postgres:password@postgres:5432/postgres
+      REDIS_ADDR: redis:6379
+      REDIS_DB: "0"
+      REDIS_PASSWORD: password
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
+  redis_data:
